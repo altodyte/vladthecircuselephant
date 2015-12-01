@@ -1,13 +1,5 @@
-/* Encoder Library - Basic Example
- * http://www.pjrc.com/teensy/td_libs_Encoder.html
- *
- * This example code is in the public domain.
- */
-
 #include <Encoder.h>
 #include <Wire.h>
-#include <Adafruit_MotorShield.h>
-#include "utility/Adafruit_PWMServoDriver.h"
 
 // Change these two numbers to the pins connected to your encoder.
 //   Best Performance: both pins have interrupt capability
@@ -19,14 +11,6 @@ Encoder enc2(18,16);
 Encoder enc3(19,17);
 //   avoid using pins with LEDs attached
 
-// Adafruit_MotorShield AFMS = Adafruit_MotorShield(); 
-
-// Adafruit_DCMotor *motor0 = AFMS.getMotor(1);
-// Adafruit_DCMotor *motor1 = AFMS.getMotor(2);
-// Adafruit_DCMotor *motor2 = AFMS.getMotor(3);
-// Adafruit_DCMotor *motor3 = AFMS.getMotor(4);
-
-bool printFlag = false;
 long enc0old  = -999;
 long enc1old = -999;
 long enc2old = -999;
@@ -36,114 +20,102 @@ long enc1new = enc1.read();
 long enc2new = enc2.read();
 long enc3new = enc3.read();
 
+long e0lastTime = millis();
+long e1lastTime = millis();
+long e2lastTime = millis();
+long e3lastTime = millis();
+long e0thisTime = millis();
+long e1thisTime = millis();
+long e2thisTime = millis();
+long e3thisTime = millis();
+
+double scaleFactor = 1000.0;
+double e0deriv = 0;
+double e1deriv = 0;
+double e2deriv = 0;
+double e3deriv = 0;
+
+long loopTime = 100;
+long nextLoop;
+
 void setup() {
-  // AFMS.begin();
   Serial.begin(9600);
   Serial.println("Basic Encoder Test:");
-  // m0set(0);
-  // m1set(0);
-  // m2set(0);
-  // m3set(0);
+  long nextLoop = millis();
 }
 
 void loop() {
-  delay(10);
-  checkEncoders();
-  printEncoders();
+  updateEncoders();
+  if (millis()>nextLoop){
+    calculateDerivatives();
+    storeEncoders();
+    printEncoders();
+    printDerivs();
+    nextLoop = millis()+loopTime;
+  }
 }
 
-void checkEncoders(){
+void updateEncoders(){
   enc0new = enc0.read();
+  e0thisTime = millis();
   enc1new = enc1.read();
+  e1thisTime = millis();
   enc2new = enc2.read();
+  e2thisTime = millis();
   enc3new = enc3.read();
+  e3thisTime = millis();
+}
 
+void storeEncoders(){
   if (enc0new != enc0old) {
     enc0old = enc0new;
-    printFlag = true;
+    e0lastTime = millis();
   }
   if (enc1new != enc1old) {
     enc1old = enc1new;
-    printFlag = true;
+    e1lastTime = millis();
   }
   if (enc2new != enc2old) {
     enc2old = enc2new;
-    printFlag = true;
+    e2lastTime = millis();
   }
   if (enc3new != enc3old) {
     enc3old = enc3new;
-    printFlag = true;
+    e3lastTime = millis();
   }
+}
+
+void calculateDerivatives(){
+  // call updateEncoders first, and storeEncoders after
+  e0deriv = scaleFactor*(enc0new - enc0old)/(e0thisTime-e0lastTime);
+  e1deriv = scaleFactor*(enc1new - enc1old)/(e1thisTime-e1lastTime);
+  e2deriv = scaleFactor*(enc2new - enc2old)/(e2thisTime-e2lastTime);
+  e3deriv = scaleFactor*(enc3new - enc3old)/(e3thisTime-e3lastTime);
 }
 
 void printEncoders(){
-  if (printFlag) {
-    long t = millis();
-    Serial.print(t);
-    Serial.print(", ");
-    Serial.print(enc0old);
-  
-    Serial.print(", ");
-    Serial.print(enc1old);
-  
-    Serial.print(", ");
-    Serial.print(enc2old);
-  
-    Serial.print(", ");
-    Serial.println(enc3old);
-    
-    printFlag = false; 
-  }
+  Serial.print(enc0old);
+
+  Serial.print(", ");
+  Serial.print(enc1old);
+
+  Serial.print(", ");
+  Serial.print(enc2old);
+
+  Serial.print(", ");
+  Serial.print(enc3old);
 }
 
-// void m0set(int i){
-//   if (i==0) {
-//     motor0->run(RELEASE);
-//     motor0->setSpeed(0);
-//   } else if (i<0){
-//     motor0->setSpeed(abs(i));
-//     motor0->run(BACKWARD);
-//   } else {
-//     motor0->setSpeed(i);
-//     motor0->run(FORWARD);
-//   }
-// }
+void printDerivs(){
+  Serial.print(" | ");
+  Serial.print(e0deriv);
 
-// void m1set(int i){
-//   if (i==0) {
-//     motor1->run(RELEASE);
-//     motor1->setSpeed(0);
-//   } else if (i<0){
-//     motor1->setSpeed(abs(i));
-//     motor1->run(BACKWARD);
-//   } else {
-//     motor1->setSpeed(i);
-//     motor1->run(FORWARD);
-//   }
-// }
+  Serial.print(", ");
+  Serial.print(e1deriv);
 
-// void m2set(int i){
-//   if (i==0) {
-//     motor2->run(RELEASE);
-//     motor2->setSpeed(0);
-//   } else if (i<0){
-//     motor2->setSpeed(abs(i));
-//     motor2->run(BACKWARD);
-//   } else {
-//     motor2->setSpeed(i);
-//     motor2->run(FORWARD);
-//   }
-// }
+  Serial.print(", ");
+  Serial.print(e2deriv);
 
-// void m3set(int i){
-//   if (i==0) {
-//     motor3->run(RELEASE);
-//     motor3->setSpeed(0);
-//   } else if (i<0){
-//     motor3->setSpeed(abs(i));
-//     motor3->run(BACKWARD);
-//   } else {
-//     motor3->setSpeed(i);
-//     motor3->run(FORWARD);
-//   }
-// }
+  Serial.print(", ");
+  Serial.println(e3deriv);
+}
