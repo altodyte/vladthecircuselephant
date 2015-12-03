@@ -36,7 +36,7 @@ long enc1new = enc1.read();
 long enc2new = enc2.read();
 long enc3new = enc3.read();
 
-int motorFlag = 3; // 0-3
+int motorFlag = 0; // 0-3
 
 void setup() {
   AFMS.begin();
