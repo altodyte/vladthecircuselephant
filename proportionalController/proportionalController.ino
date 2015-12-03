@@ -49,7 +49,7 @@ double axG = 0, ayG = 0, azG = 0; // ..., after low-pass
 
 double roll = 0, pitch = 0;
 double rollError = 0, pitchError = 0;
-const float rollOffset = 1.5, pitchOffset = 6.4;
+const float rollOffset = 2.5, pitchOffset = 5.4;
 
 const float alpha = 0.99; // "low pass filter" coefficient -- lower = more included in rolling average
 
@@ -73,10 +73,10 @@ long enc3new = enc3.read();
 int pitchActuators = 0;
 int rollActuators = 0;
 double proportionalConstant = 6; 
-double killZone = 30.0;
-int deadZone = 5;
+double killZone = 30.0; // not working because of rapid acceleration
+int deadZone = 2;
 
-int loopDuration = 2; // loop should last as close to 2 milliseconds as possible
+int loopDuration = 20; // loop should last as close to 20 milliseconds as possible
 long long nextLoop = 0;
 
 // Fancy controller
@@ -84,14 +84,23 @@ long long nextLoop = 0;
 // double constantA = -56.25;
 // double constantB = 51.76;
 
-double constantA = -41.67;
-double constantB = 38.34;
-double constantC = 0.9967;
+// double constantA = -41.67;
+// double constantB = 38.34;
+// double constantC = 0.9967;
+
+// double constantA = -333.33;
+// double constantB = 323.3;
+// double constantC = 0.998;
+
+double constantA = -133.33;
+double constantB = 129.34;
+double constantC = 0.998;
+
 
 double voltageIntoPitchPositionFeedback = 0;
 double previousVoltageIntoPitchPositionFeedback = voltageIntoPitchPositionFeedback;
 double previousPitchError = pitchError;
-double kayPee = 1.0/3.0;
+double kayPee = 1; //1.0/3.0;
 double pitchPsi = 0;
 
 double voltageIntoRollPositionFeedback = 0;
@@ -159,15 +168,19 @@ void loop() {
         digitalWrite(LED_PIN, blinkState);
 
         // handle control of pitch axis
-        if (pitch != coerce(pitch,-killZone,killZone)){
-            // kill motors if we're doomed to fall
-            fuck();
-            delay(1000);
-        } if (roll != coerce(roll,-killZone,killZone)){
-            // kill motors if we're doomed to fall
-            fuck();
-            delay(1000);
-        } else {
+        // if (pitch != coerce(pitch,-killZone,killZone)){
+        //     // kill motors if we're doomed to fall
+        //     fuck();
+        //     delay(1000);
+        // } if (roll != coerce(roll,-killZone,killZone)){
+        //     // kill motors if we're doomed to fall
+        //     fuck();
+        //     delay(1000);
+        // } else {
+
+        if (true){
+            // rollError = d2r(rollError);
+            // pitchError = d2r(pitchError);
             pitchPsi = ticksToRadians(long((-enc1.read()+enc3.read())/2));
             voltageIntoPitchPositionFeedback = constantC*previousVoltageIntoPitchPositionFeedback + constantA*pitchError + constantB*previousPitchError;
             pitchActuators = voltageToMotorShield(voltageIntoPitchPositionFeedback + kayPee*pitchPsi);
@@ -271,6 +284,10 @@ int voltageToMotorShield(double voltage){
 
 double ticksToRadians(long ticks){
     return ticks*6.0*M_PI/1000.0;
+}
+
+double d2r(double d){
+  return d*M_PI/180.0;
 }
 
 /******************************************************************************

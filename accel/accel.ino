@@ -28,9 +28,11 @@ double axG = 0, ayG = 0, azG = 0; // ..., after low-pass
 
 double gxDraw = 0, gyDraw = 0, gzDraw = 0; // for storing degree/second measurements
 
-double roll, pitch, accRoll, accPitch;
-const float compCoeff = 0.0; // coefficient of gyroscopic portion of complementary filter estimation of Roll and Pitch
-const float rollOffset = 1.5, pitchOffset = 6.4;
+double roll = 0, pitch = 0, accRoll = 0, accPitch = 0;
+double oldRoll = 0, oldPitch = 0, oldAccRoll = 0, oldAccPitch = 0;
+const float compCoeff = 0.8; // coefficient of gyroscopic portion of complementary filter estimation of Roll and Pitch
+const float rollOffset = 2.5, pitchOffset = 5.4;
+
 const float alpha = 0.05;
 
 int sampleTime = 0;
@@ -68,9 +70,9 @@ void loop() {
     lastSampleMark = micros();
 
     // convert to deg/s
-    gxDraw = val2dps(gx)/1000;
-    gyDraw = val2dps(gy)/1000;
-    gzDraw = val2dps(gz)/1000;
+    gxDraw = val2dps(gx)/1000000;
+    gyDraw = val2dps(gy)/1000000;
+    gzDraw = val2dps(gz)/1000000;
 
 
     // convert to g-factor
@@ -78,9 +80,12 @@ void loop() {
     ayGraw = val2g(ay);
     azGraw = val2g(az);
 
+    axG = axGraw;
+    ayG = ayGraw;
+    azG = azGraw;
+
     // preliminary calculations
     accRoll  = (-(atan2(ayG, -azG)*180.0)/M_PI) - rollOffset;
-    Serial.println(accRoll);
     accPitch = ((atan2(axG, sqrt(ayG*ayG + azG*azG))*180.0)/M_PI) - pitchOffset;
 
     roll = compCoeff*(roll + gxDraw*sampleTime) + (1-compCoeff)*(accRoll);
@@ -110,15 +115,30 @@ void loop() {
     // pitch = ((atan2(axG, sqrt(ayG*ayG + azG*azG))*180.0)/M_PI) - pitchOffset;
 
  
+    // Serial.print("Roll: ");
+    // Serial.print(roll);
+    // Serial.print(", ");
+    // Serial.print(accRoll);
+    // Serial.print(" | ");
+    // Serial.print("Pitch: ");
+    // Serial.print(pitch);
+    // Serial.print(", ");
+    // Serial.println(accPitch);
+
     Serial.print("Roll: ");
-    Serial.print(roll);
+    Serial.print(roll*alpha + (oldRoll*(1.0-alpha)));
     Serial.print(", ");
-    Serial.print(accRoll);
+    Serial.print(accRoll*alpha + (oldAccRoll*(1.0-alpha)));
     Serial.print(" | ");
     Serial.print("Pitch: ");
-    Serial.print(pitch);
+    Serial.print(pitch*alpha + (oldPitch*(1.0-alpha)));
     Serial.print(", ");
-    Serial.println(accPitch);
+    Serial.println(accPitch*alpha + (oldAccPitch*(1.0-alpha)));
+
+    oldRoll = roll;
+    oldPitch = pitch;
+    oldAccRoll = accRoll;
+    oldAccPitch = accPitch;
 
 
     // blink LED to indicate activity
