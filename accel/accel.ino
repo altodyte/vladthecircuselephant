@@ -26,8 +26,7 @@ double axGraw = 0, ayGraw = 0, azGraw = 0; // for storing scaled to gravity-fact
 double axG = 0, ayG = 0, azG = 0; // ..., after low-pass
 
 double roll, pitch;
-const float rollOffset = 0.9;
-const float pitchOffset = 4.8;
+const float rollOffset = 3.05, pitchOffset = 5.7;
 const float alpha = 0.05;
 
 void setup() {

@@ -48,7 +48,7 @@ double axG = 0, ayG = 0, azG = 0; // ..., after low-pass
 
 double roll = 0, pitch = 0;
 double rollError = 0, pitchError = 0;
-const float rollOffset = 0.9, pitchOffset = 4.8;
+const float rollOffset = 3.05, pitchOffset = 5.7;
 
 const float alpha = 0.9; // "low pass filter" coefficient -- lower = more included in rolling average
 
@@ -71,7 +71,12 @@ long enc3new = enc3.read();
 
 int pitchActuators = 0;
 int rollActuators = 0;
-double proportionalConstant = 5; 
+double proportionalConstant = 6; 
+double killZone = 30.0;
+int deadZone = 5;
+
+int loopDuration = 2; // loop should last as close to 2 milliseconds as possible
+long long nextLoop = 0;
 
 void setup() {
     // join I2C bus (I2Cdev library doesn't do this automatically)
@@ -98,55 +103,75 @@ void setup() {
     Serial.println("Initializing AFMS I2C device...");
     AFMS.begin();
     fuck(); // kills motors
+
+    nextLoop = millis()+20;
 }
 
 void loop() {
-    // read raw accel measurements from device -- reading other sensors blocks too long
-    accelgyro.getAcceleration(&ax, &ay, &az);
+    if (millis()>nextLoop){
+        nextLoop+=loopDuration;
 
-    // convert to g-scale
-    axGraw = val2g(ax);
-    ayGraw = val2g(ay);
-    azGraw = val2g(az);
+        // read raw accel measurements from device -- reading other sensors blocks too long
+        accelgyro.getAcceleration(&ax, &ay, &az);
 
-    // low-pass filter
-    axG = axGraw * alpha + (axG * (1.0 - alpha));
-    ayG = ayGraw * alpha + (ayG * (1.0 - alpha));
-    azG = azGraw * alpha + (azG * (1.0 - alpha));
+        // convert to g-scale
+        axGraw = val2g(ax);
+        ayGraw = val2g(ay);
+        azGraw = val2g(az);
 
-    // calculate roll and pitch
-    roll  = (-(atan2(ayG, -azG)*180.0)/M_PI) - rollOffset;
-    pitch = ((atan2(axG, sqrt(ayG*ayG + azG*azG))*180.0)/M_PI) - pitchOffset;
+        // low-pass filter
+        axG = axGraw * alpha + (axG * (1.0 - alpha));
+        ayG = ayGraw * alpha + (ayG * (1.0 - alpha));
+        azG = azGraw * alpha + (azG * (1.0 - alpha));
 
-    // calculate roll and pitch errors
-    rollError = 0 - roll;
-    pitchError = 0 - pitch;
+        // calculate roll and pitch
+        roll  = (-(atan2(ayG, -azG)*180.0)/M_PI) - rollOffset;
+        pitch = ((atan2(axG, sqrt(ayG*ayG + azG*azG))*180.0)/M_PI) - pitchOffset;
 
-    // blink LED to indicate activity
-    blinkState = !blinkState;
-    digitalWrite(LED_PIN, blinkState);
+        // calculate roll and pitch errors
+        rollError = 0 - roll;
+        pitchError = 0 - pitch;
 
-    // handle control of pitch axis
-    if (pitch != coerce(pitch,-20.0,20.0)){
-        // kill motors if we're doomed to fall
-        fuck();
-        delay(1000);
-    } else {
-        pitchActuators = modify(proportionalConstant*pitchError);
-        m1set(-pitchActuators);
-        m3set(pitchActuators);
+        // blink LED to indicate activity
+        blinkState = !blinkState;
+        digitalWrite(LED_PIN, blinkState);
 
-        Serial.print("Pitch: ");
-        Serial.print(pitch);
-        Serial.print(" | ");
-        Serial.print("Roll: ");
-        Serial.print(roll);
-        Serial.print(" || ");
-        Serial.print("M2: ");
-        Serial.print(pitchActuators);
-        Serial.print(" | ");
-        Serial.print("M4: ");
-        Serial.println(-pitchActuators);
+        // handle control of pitch axis
+        if (pitch != coerce(pitch,-killZone,killZone)){
+            // kill motors if we're doomed to fall
+            fuck();
+            delay(1000);
+        } if (roll != coerce(roll,-killZone,killZone)){
+            // kill motors if we're doomed to fall
+            fuck();
+            delay(1000);
+        } else {
+            pitchActuators = modify(proportionalConstant*pitchError);
+            m1set(-pitchActuators);
+            m3set(pitchActuators);
+
+            rollActuators = modify(proportionalConstant*rollError);
+            m0set(rollActuators);
+            m2set(-rollActuators);
+
+            // Serial.print("Pitch: ");
+            // Serial.print(pitch);
+            // Serial.print(" || ");
+            // Serial.print("M2: ");
+            // Serial.print(-pitchActuators);
+            // Serial.print(" | ");
+            // Serial.print("M4: ");
+            // Serial.print(pitchActuators);
+            // Serial.print(" ||| ");
+            // Serial.print("Roll: ");
+            // Serial.print(roll);
+            // Serial.print(" || ");
+            // Serial.print("M1: ");
+            // Serial.print(rollActuators);
+            // Serial.print(" | ");
+            // Serial.print("M3: ");
+            // Serial.println(-rollActuators);
+        }
     }
 }
 
@@ -196,7 +221,7 @@ int scale(int in, int inputMin, int inputMax, int outputMin, int outputMax){
 }
 
 int modify(int in){
-  int deadZoneMin = -5, deadZoneMax = 5;
+  int deadZoneMin = -deadZone, deadZoneMax = deadZone;
   if ((in>deadZoneMin)&&(in<deadZoneMax)){
     return 0;
   }
