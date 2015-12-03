@@ -21,13 +21,20 @@ int16_t mx, my, mz;
 bool blinkState = false;
 
 const uint8_t accelRange=0; // explicitly sets the accelerometer to +/- 2g
+const uint8_t gyroRange=0; // explicitly sets the gyroscope range to +/- 250 deg/s
 
 double axGraw = 0, ayGraw = 0, azGraw = 0; // for storing scaled to gravity-factor accelerations
 double axG = 0, ayG = 0, azG = 0; // ..., after low-pass
 
-double roll, pitch;
-const float rollOffset = 3.05, pitchOffset = 5.7;
+double gxDraw = 0, gyDraw = 0, gzDraw = 0; // for storing degree/second measurements
+
+double roll, pitch, accRoll, accPitch;
+const float compCoeff = 0.0; // coefficient of gyroscopic portion of complementary filter estimation of Roll and Pitch
+const float rollOffset = 1.5, pitchOffset = 6.4;
 const float alpha = 0.05;
+
+int sampleTime = 0;
+long long lastSampleMark = micros();
 
 void setup() {
     // join I2C bus (I2Cdev library doesn't do this automatically)
@@ -47,6 +54,7 @@ void setup() {
     Serial.println(accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
 
     accelgyro.setFullScaleAccelRange(accelRange);
+    accelgyro.setFullScaleGyroRange(gyroRange);
 
     // configure Arduino LED for
     pinMode(LED_PIN, OUTPUT);
@@ -55,27 +63,62 @@ void setup() {
 void loop() {
     // read raw accel/gyro measurements from device
     accelgyro.getAcceleration(&ax, &ay, &az);
+    accelgyro.getRotation(&gx, &gy, &gz);
+    sampleTime = micros()-lastSampleMark;
+    lastSampleMark = micros();
+
+    // convert to deg/s
+    gxDraw = val2dps(gx)/1000;
+    gyDraw = val2dps(gy)/1000;
+    gzDraw = val2dps(gz)/1000;
+
 
     // convert to g-factor
     axGraw = val2g(ax);
     ayGraw = val2g(ay);
     azGraw = val2g(az);
 
-    // low-pass filter
-    axG = axGraw * alpha + (axG * (1.0 - alpha));
-    ayG = ayGraw * alpha + (ayG * (1.0 - alpha));
-    azG = azGraw * alpha + (azG * (1.0 - alpha));
+    // preliminary calculations
+    accRoll  = (-(atan2(ayG, -azG)*180.0)/M_PI) - rollOffset;
+    Serial.println(accRoll);
+    accPitch = ((atan2(axG, sqrt(ayG*ayG + azG*azG))*180.0)/M_PI) - pitchOffset;
 
-    // calculate roll and pitch
-    roll  = (-(atan2(ayG, -azG)*180.0)/M_PI) - rollOffset;
-    pitch = ((atan2(axG, sqrt(ayG*ayG + azG*azG))*180.0)/M_PI) - pitchOffset;
+    roll = compCoeff*(roll + gxDraw*sampleTime) + (1-compCoeff)*(accRoll);
+    pitch = compCoeff*(pitch + gyDraw*sampleTime) + (1-compCoeff)*(accPitch);
+
+
+    // Serial.print("a/g/m:\t");
+    // Serial.print(ax); Serial.print("\t");
+    // Serial.print(ay); Serial.print("\t");
+    // Serial.print(az); Serial.print("\t");
+    // Serial.print(gx); Serial.print("\t");
+    // Serial.print(gy); Serial.print("\t");
+    // Serial.print(gz); Serial.print("\t");
+    // Serial.print(mx); Serial.print("\t");
+    // Serial.print(my); Serial.print("\t");
+    // Serial.println(mz);
+
+    
+
+    // // low-pass filter
+    // axG = axGraw * alpha + (axG * (1.0 - alpha));
+    // ayG = ayGraw * alpha + (ayG * (1.0 - alpha));
+    // azG = azGraw * alpha + (azG * (1.0 - alpha));
+
+    // // calculate roll and pitch
+    // roll  = (-(atan2(ayG, -azG)*180.0)/M_PI) - rollOffset;
+    // pitch = ((atan2(axG, sqrt(ayG*ayG + azG*azG))*180.0)/M_PI) - pitchOffset;
 
  
+    Serial.print("Roll: ");
+    Serial.print(roll);
+    Serial.print(", ");
+    Serial.print(accRoll);
+    Serial.print(" | ");
     Serial.print("Pitch: ");
     Serial.print(pitch);
-    Serial.print(" | ");
-    Serial.print("Roll: ");
-    Serial.println(roll);
+    Serial.print(", ");
+    Serial.println(accPitch);
 
 
     // blink LED to indicate activity
@@ -85,6 +128,14 @@ void loop() {
 
 double val2g(int16_t acc){
     return double(acc)/16384.0; // currently set to +/- 2g
+}
+
+double val2dps(int16_t val){
+    return double(val)/524.288; // currently set to +/- 250 deg/sec
+}
+
+double d2r(double d){
+    return (d*M_PI)/180;
 }
     
     // these methods (and a few others) are also available

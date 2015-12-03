@@ -43,14 +43,15 @@ MPU6050 accelgyro;
 const uint8_t accelRange=0; // explicitly sets the accelerometer to +/- 2g
 
 int16_t ax, ay, az;
+int16_t gx, gy, gz;
 double axGraw = 0, ayGraw = 0, azGraw = 0; // for storing scaled to gravity-factor accelerations
 double axG = 0, ayG = 0, azG = 0; // ..., after low-pass
 
 double roll = 0, pitch = 0;
 double rollError = 0, pitchError = 0;
-const float rollOffset = 3.05, pitchOffset = 5.7;
+const float rollOffset = 1.5, pitchOffset = 6.4;
 
-const float alpha = 0.9; // "low pass filter" coefficient -- lower = more included in rolling average
+const float alpha = 0.99; // "low pass filter" coefficient -- lower = more included in rolling average
 
 /******************************************************************************
 ***************************** Encoder State Variables *************************
@@ -78,12 +79,33 @@ int deadZone = 5;
 int loopDuration = 2; // loop should last as close to 2 milliseconds as possible
 long long nextLoop = 0;
 
+// Fancy controller
+// double constantC = 0.995;
+// double constantA = -56.25;
+// double constantB = 51.76;
+
+double constantA = -41.67;
+double constantB = 38.34;
+double constantC = 0.9967;
+
+double voltageIntoPitchPositionFeedback = 0;
+double previousVoltageIntoPitchPositionFeedback = voltageIntoPitchPositionFeedback;
+double previousPitchError = pitchError;
+double kayPee = 1.0/3.0;
+double pitchPsi = 0;
+
+double voltageIntoRollPositionFeedback = 0;
+double previousVoltageIntoRollPositionFeedback = voltageIntoRollPositionFeedback;
+double previousRollError = rollError;
+double rollPsi = 0;
+
+
 void setup() {
     // join I2C bus (I2Cdev library doesn't do this automatically)
     Wire.begin();
 
     // initialize serial communication
-    Serial.begin(38400); //57600
+    Serial.begin(250000); //57600
 
     // initialize IMU device
     Serial.println("Initializing IMU I2C device...");
@@ -146,31 +168,47 @@ void loop() {
             fuck();
             delay(1000);
         } else {
-            pitchActuators = modify(proportionalConstant*pitchError);
-            m1set(-pitchActuators);
-            m3set(pitchActuators);
+            pitchPsi = ticksToRadians(long((-enc1.read()+enc3.read())/2));
+            voltageIntoPitchPositionFeedback = constantC*previousVoltageIntoPitchPositionFeedback + constantA*pitchError + constantB*previousPitchError;
+            pitchActuators = voltageToMotorShield(voltageIntoPitchPositionFeedback + kayPee*pitchPsi);
+            previousPitchError = pitchError;
+            previousVoltageIntoPitchPositionFeedback = voltageIntoPitchPositionFeedback;
+            m1set(pitchActuators);
+            m3set(-pitchActuators);
 
-            rollActuators = modify(proportionalConstant*rollError);
-            m0set(rollActuators);
-            m2set(-rollActuators);
+            rollPsi = ticksToRadians(long((-enc0.read()+enc2.read())/2));
+            voltageIntoRollPositionFeedback = constantC*previousVoltageIntoRollPositionFeedback + constantA*rollError + constantB*previousRollError;
+            rollActuators = voltageToMotorShield(voltageIntoRollPositionFeedback + kayPee*rollPsi);
+            previousRollError = rollError;
+            previousVoltageIntoRollPositionFeedback = voltageIntoRollPositionFeedback;
+            m0set(-rollActuators);
+            m2set(rollActuators);
 
-            // Serial.print("Pitch: ");
-            // Serial.print(pitch);
-            // Serial.print(" || ");
-            // Serial.print("M2: ");
-            // Serial.print(-pitchActuators);
-            // Serial.print(" | ");
-            // Serial.print("M4: ");
-            // Serial.print(pitchActuators);
-            // Serial.print(" ||| ");
-            // Serial.print("Roll: ");
-            // Serial.print(roll);
-            // Serial.print(" || ");
-            // Serial.print("M1: ");
-            // Serial.print(rollActuators);
-            // Serial.print(" | ");
-            // Serial.print("M3: ");
-            // Serial.println(-rollActuators);
+            // pitchActuators = modify(proportionalConstant*pitchError);
+            // m1set(-pitchActuators);
+            // m3set(pitchActuators);
+
+            // rollActuators = modify(proportionalConstant*rollError);
+            // m0set(rollActuators);
+            // m2set(-rollActuators);
+
+            Serial.print("Pitch: ");
+            Serial.print(pitch);
+            Serial.print(" || ");
+            Serial.print("M2: ");
+            Serial.print(-pitchActuators);
+            Serial.print(" | ");
+            Serial.print("M4: ");
+            Serial.print(pitchActuators);
+            Serial.print(" ||| ");
+            Serial.print("Roll: ");
+            Serial.print(roll);
+            Serial.print(" || ");
+            Serial.print("M1: ");
+            Serial.print(rollActuators);
+            Serial.print(" | ");
+            Serial.print("M3: ");
+            Serial.println(-rollActuators);
         }
     }
 }
@@ -225,6 +263,14 @@ int modify(int in){
   if ((in>deadZoneMin)&&(in<deadZoneMax)){
     return 0;
   }
+}
+
+int voltageToMotorShield(double voltage){
+    return int(voltage/255);
+}
+
+double ticksToRadians(long ticks){
+    return ticks*6.0*M_PI/1000.0;
 }
 
 /******************************************************************************
