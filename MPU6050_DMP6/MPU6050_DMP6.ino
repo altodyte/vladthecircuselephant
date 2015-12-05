@@ -358,22 +358,22 @@ void loop() {
                 // Serial.print(-ypr[2] * 180/M_PI - rollOffset * 180/M_PI, 3);
                 // Serial.print(" ");
                 // Serial.println(ypr[1] * 180/M_PI - pitchOffset * 180/M_PI, 3);
-            } else if (abs(rollLast + ypr[2] * 180/M_PI) < 0.005 && abs(pitchLast - ypr[1] * 180/M_PI) < 0.005) { // have we just stabilized?
+            } else if (abs(rollLast + ypr[2]) < 0.0001 && abs(pitchLast - ypr[1]) < 0.0001) { // have we just stabilized?
                 stabilized = true;
-                beatPeriod = 500;
+                beatPeriod = 1000;
                 // Serial.println("DONE");
 
                 rollOffset = -ypr[2];
                 pitchOffset = ypr[1];
             } else { // we're waiting until stabilization
-                rollLast = 0.005*(-ypr[2] * 180/M_PI) + 0.995*rollLast;
-                pitchLast = 0.005*(ypr[1] * 180/M_PI) + 0.995*pitchLast;
-                // rollOffset = -ypr[2] * 180/M_PI;
-                // pitchOffset = ypr[1] * 180/M_PI;
-                rollErr = abs(rollLast + ypr[2] * 180/M_PI);
-                pitchErr = abs(pitchLast - ypr[1] * 180/M_PI);
+                rollLast = 0.005*(-ypr[2]) + 0.995*rollLast;
+                pitchLast = 0.005*(ypr[1]) + 0.995*pitchLast;
 
-                beatPeriod = 100*((int) rollErr + pitchErr);
+                rollErr = abs(rollLast + ypr[2]);
+                pitchErr = abs(pitchLast - ypr[1]);
+
+                // beatPeriod = 100*((int) rollErr + pitchErr);
+                beatPeriod = 60*((int) log10(rollErr + pitchErr) + 3.5);
             }
         #endif
 
