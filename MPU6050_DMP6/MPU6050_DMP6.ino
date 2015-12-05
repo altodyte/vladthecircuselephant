@@ -120,8 +120,8 @@ MPU6050 mpu;
 
 #define LED_PIN 13 // (Arduino is 13, Teensy is 11, Teensy++ is 6)
 bool blinkState = false;
-unsigned int beatPeriod = 500;
-unsigned long int nextBeat;
+unsigned int beatPeriod = 1000;
+unsigned long int lastBeat;
 
 // MPU control/status vars
 bool dmpReady = false;  // set true if DMP init was successful
@@ -146,6 +146,7 @@ uint8_t teapotPacket[14] = { '$', 0x02, 0,0, 0,0, 0,0, 0,0, 0x00, 0x00, '\r', '\
 
 float rollOffset = 0, pitchOffset = 0;
 float rollLast = 200, pitchLast = 200;
+float pitchErr = 0, rollErr = 0;
 bool stabilized = false;
 
 
@@ -241,7 +242,7 @@ void setup() {
         // Serial.println(F(")"));
     }
 
-    nextBeat = millis() + beatPeriod;
+    lastBeat = millis();
 }
 
 
@@ -253,8 +254,9 @@ void loop() {
     // if programming failed, don't try to do anything
     if (!dmpReady) return;
 
-    if (!stabilized && millis() > nextBeat) {
-        nextBeat += beatPeriod;
+    if (millis() > lastBeat + beatPeriod) {
+        // nextBeat += beatPeriod;
+        lastBeat = millis();
         blinkState = !blinkState;
         digitalWrite(LED_PIN, blinkState);
     }
@@ -347,16 +349,7 @@ void loop() {
             // Serial.print(" ");
             // Serial.println(pitchLast - ypr[1] * 180/M_PI, 3);
 
-            if (abs(rollLast + ypr[2] * 180/M_PI) < 0.005 && abs(pitchLast - ypr[1] * 180/M_PI) < 0.005) {
-                stabilized = true;
-                digitalWrite(LED_PIN, true);
-                // Serial.println("DONE");
-
-                rollOffset = -ypr[2];
-                pitchOffset = ypr[1];
-            }
-
-            if (stabilized) {
+            if (stabilized) { // are we already stabilized?
                 Serial.print('r');
                 Serial.print(-ypr[2] - rollOffset, 5);
                 Serial.print('p');
@@ -365,11 +358,22 @@ void loop() {
                 // Serial.print(-ypr[2] * 180/M_PI - rollOffset * 180/M_PI, 3);
                 // Serial.print(" ");
                 // Serial.println(ypr[1] * 180/M_PI - pitchOffset * 180/M_PI, 3);
-            } else {
+            } else if (abs(rollLast + ypr[2] * 180/M_PI) < 0.005 && abs(pitchLast - ypr[1] * 180/M_PI) < 0.005) { // have we just stabilized?
+                stabilized = true;
+                beatPeriod = 500;
+                // Serial.println("DONE");
+
+                rollOffset = -ypr[2];
+                pitchOffset = ypr[1];
+            } else { // we're waiting until stabilization
                 rollLast = 0.005*(-ypr[2] * 180/M_PI) + 0.995*rollLast;
                 pitchLast = 0.005*(ypr[1] * 180/M_PI) + 0.995*pitchLast;
                 // rollOffset = -ypr[2] * 180/M_PI;
                 // pitchOffset = ypr[1] * 180/M_PI;
+                rollErr = abs(rollLast + ypr[2] * 180/M_PI);
+                pitchErr = abs(pitchLast - ypr[1] * 180/M_PI);
+
+                beatPeriod = 100*((int) rollErr + pitchErr);
             }
         #endif
 
