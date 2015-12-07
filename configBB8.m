@@ -109,8 +109,8 @@ Mv1 = Kmv1/s/(tmv1*s+1); % algebraically-found velocity feedback motor TF
 % pzmap(K,Mp,G);
 % legend('K','Mp','G');
 % figure;
-margin(K*Mp*G);
-[Gm, Pm, Wgm, Wpm] = margin(K*Mp*G);
+% margin(K*Mp*G);
+% [Gm, Pm, Wgm, Wpm] = margin(K*Mp*G);
 % Pm
 % step(minreal(K*Mp*G/(1+K*Mp*G)));
 % step(K*Mp*G/(1+K*Mp*G),20);
@@ -120,8 +120,8 @@ margin(K*Mp*G);
 
 sysd = c2d(K, 0.002);
 [Num, Den, ~] = tfdata(sysd);
-vpa(Num{:}, 6)
-vpa(Den{:}, 6)
+vpa(Num{:}, 6);
+vpa(Den{:}, 6);
 
 %% setting block properties from parameters
 [z, p, k] = zpkdata(K);
