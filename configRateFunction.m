@@ -10,17 +10,17 @@ syms fM % friction force on ball from ground [N]
 
 % state variables
 phi = sym('phi(t)');
-psi = sym('psi(t)');
+psiV = sym('psiV(t)');
 
 % geometric relationship
-x = r/2/pi*psi+R/2/pi*phi;
+x = r/2/pi*psiV + R/2/pi*phi;
 
 %% lambda l equations of motion
 % accelerations
 rl = [x; R] + (R+r)*[sin(phi); cos(phi)];
 vl = simplify(diff(rl, t), 10);
 al = simplify(diff(vl, t), 10);
-alphal = diff(psi, t, 2);
+alphal = diff(psiV, t, 2);
 
 % sums of forces and torques
 sumfl = [0; -l*g] + fl*[cos(phi); -sin(phi)] + nl*[sin(phi); cos(phi)];
@@ -44,9 +44,20 @@ sumtM = R*(fM + fl);
 eomsM = [sumfM == M*aM; sumtM == IM*alphaM];
 
 %% rewrite equations of motion into system of equations
-varSyms = {'phi(t)', 'psi(t)', 'diff(phi, t)', 'diff(psi, t)', 'diff(phi, t, t)', 'diff(psi, t, t)'};
-varVals = {'phi', 'psi', 'dphi', 'dpsi', 'ddphi', 'ddpsi'};
-eoms = subs([eomsl; eomsM], varSyms, varVals);
+stateSyms = [phi psiV];
+stateVars = {'phi' 'psi'};
+dstateSyms = diff(stateSyms, t);
+dstateVars = {'dphi', 'dpis'};
+ddstateSyms = diff(dstateSyms, t);
+ddstateVars = {'ddphi' 'ddpsi'};
+% stateSyms = {'diff(phi, t, t)', 'diff(psi, t, t)', ...
+%     'diff(phi, t)', 'diff(psi, t)', ...
+%     phi, psiV};
+% stateVars = {'ddphi', 'ddpsi', 'dphi', 'dpsi', 'phi', 'psi'};
+eoms = [eomsl; eomsM];
+eoms_expr = subs(eoms, ddstateSyms, ddstateVars);
+eoms_expr = subs(eoms_expr, dstateSyms, dstateVars);
+eoms_expr = subs(eoms_expr, stateSyms, stateVars);
 vars = {'ddphi'; 'ddpsi'; fl; nl; fM};
-[A, b] = equationsToMatrix(eoms, vars);
+[A, b] = equationsToMatrix(eoms_expr, vars);
 matlabFunction(A, b, 'File', 'Eoms.m');

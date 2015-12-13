@@ -1,5 +1,6 @@
 function configBB8
-% BB8 % open simulink project
+BB8 % open simulink project
+BB8_sim % open simulink project
 
 %% conversion factors
 in2m = convlength(1, 'in', 'm');
@@ -68,7 +69,7 @@ tmv1 = tm/(1 + Kv1*Km);
 %% compensator analysis
 s = tf('s');
 K = Kk*(tkz*s+1)/(tkp*s+1);
-M = Km/(tm*s+1);
+Ma = Km/(tm*s+1);
 G = C*s^2/(tL*s+1)/(tL*s-1);
 Mv = Kmv/s/(tmv*s+1); % algebraically-found velocity feedback motor TF
 % Mv2 = minreal(M/(1+Kv*M)/s);
@@ -120,10 +121,25 @@ Mv1 = Kmv1/s/(tmv1*s+1); % algebraically-found velocity feedback motor TF
 
 sysd = c2d(K, 0.002);
 [Num, Den, ~] = tfdata(sysd);
-vpa(Num{:}, 6);
-vpa(Den{:}, 6);
+vpa(Num{:}, 6)
+vpa(Den{:}, 6)
 
 %% setting block properties from parameters
+% http://www.mathworks.com/help/simulink/ug/using-model-workspaces.html
+% http://www.mathworks.com/help/simulink/slref/simulink.modelworkspace.html#f29-123886
+hws = get_param('BB8_sim', 'modelworkspace'); 
+hws.assignin('Kt', Kt);
+% set_param('BB8_sim/Motor_elec/Kt', 'Gain', num2str(Kt, 5));
+set_param('BB8_sim/Motor_elec/Ke', 'Gain', num2str(Ke, 5));
+set_param('BB8_sim/Motor_elec/Ra_inv', 'Gain', num2str(1/Ra, 5));
+set_param('BB8_sim/Plant/IM', 'Value', num2str(IM, 5));
+set_param('BB8_sim/Plant/Il', 'Value', num2str(Ilambda, 5));
+set_param('BB8_sim/Plant/M', 'Value', num2str(M, 5));
+set_param('BB8_sim/Plant/R', 'Value', num2str(R, 5));
+set_param('BB8_sim/Plant/g', 'Value', num2str(g, 5));
+set_param('BB8_sim/Plant/l', 'Value', num2str(lambda, 5));
+set_param('BB8_sim/Plant/r', 'Value', num2str(r, 5));
+
 [z, p, k] = zpkdata(K);
 setVal('K', 'Gain', k);
 setVal('K', 'Poles', p{:}');
@@ -132,7 +148,7 @@ setVal('K', 'Zeros', z{:}');
 % setVal('K', 'Poles', -1/tkp);
 % setVal('K', 'Zeros', -1/tkz);
 
-[z, p, k] = zpkdata(M);
+[z, p, k] = zpkdata(Ma);
 setVal('M', 'Gain', k);
 setVal('M', 'Poles', p{:}');
 setVal('M', 'Zeros', z{:}');
@@ -151,10 +167,10 @@ setVal('G', 'Zeros', z{:}');
 % setVal('G', 'Zeros', [0 0]);
 
     function setVal(block, prop, val)
-        set_param(['BB8/' block], prop,  ['[' num2str(val, 3) ']']);
+        set_param(['BB8/' block], prop,  ['[' num2str(val, 5) ']']);
     end
 
     function setGain(block, gain)
-        set_param(['BB8/' block], 'Gain', num2str(gain, 3));
+        set_param(['BB8/' block], 'Gain', num2str(gain, 5));
     end
 end

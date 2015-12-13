@@ -68,6 +68,8 @@ double pitchPhi = 0;
 double pitchPhiError = 0;
 double pitchVp = 0;
 double pitchVpLast = 0;
+double pitchVv = 0;
+double pitchVa = 0;
 double pitchPhiErrorLast = 0;
 
 double rollPsi = 0;
@@ -77,6 +79,8 @@ double rollPhi = 0;
 double rollPhiError = 0;
 double rollVp = 0;
 double rollVpLast = 0;
+double rollVv = 0;
+double rollVa = 0;
 double rollPhiErrorLast = 0;
 
 
@@ -123,10 +127,10 @@ void loop() {
     while (Serial.available()) {
       inChar = Serial.read();
       for (k = 0; k < numC; ++k) if (inChar == inChars[k]) EEPROM_writeDouble(k*4, constants[k] = Serial.parseFloat());
-      // if (inChar == 'd') {
-      //   for (k = 0; k < numC; ++k) { Serial.print(constants[k]); Serial.print(" "); }
-      //   Serial.println();
-      // }
+      if (inChar == 'd') {
+        for (k = 0; k < numC; ++k) { Serial.print(constants[k]); Serial.print(" "); }
+        Serial.println();
+      }
     }
 
     // Serial.print(roll, 5);
@@ -144,14 +148,14 @@ void loop() {
     pitchPsiError = pitchPsi - pitchPsiSet;
 
     // calculate control signals
-    // rollVp = constants[2]*rollVpLast - constants[0]*rollPhiError + constants[1]*rollPhiErrorLast;
-    // rollVv = rollVp + constants[3]*rollPsiError;
-    // rollVa = voltageToMotorShield(rollVv);
-    rollActuators = constants[4]*rollPhi; // p control
-    // pitchVp = constants[2]*pitchVpLast - constants[0]*pitchPhiError + constants[1]*pitchPhiErrorLast;
-    // pitchVv = pitchVp + constants[3]*pitchPsiError;
-    // pitchVa = voltageToMotorShield(pitchVv);
-    pitchActuators = constants[4]*pitchPhi; // p control
+    rollVp = constants[2]*rollVpLast - constants[0]*rollPhiError + constants[1]*rollPhiErrorLast;
+    rollVv = rollVp + constants[3]*rollPsiError;
+    rollVa = voltageToMotorShield(rollVv);
+    // rollActuators = constants[4]*rollPhi; // p control
+    pitchVp = constants[2]*pitchVpLast - constants[0]*pitchPhiError + constants[1]*pitchPhiErrorLast;
+    pitchVv = pitchVp + constants[3]*pitchPsiError;
+    pitchVa = voltageToMotorShield(pitchVv);
+    // pitchActuators = constants[4]*pitchPhi; // p control
 
     // save current values for next loop
     rollPhiErrorLast = rollPhiError;
