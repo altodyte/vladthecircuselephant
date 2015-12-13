@@ -119,26 +119,36 @@ Mv1 = Kmv1/s/(tmv1*s+1); % algebraically-found velocity feedback motor TF
 % nyquist(K*Mp*G);
 % figure;
 
-sysd = c2d(K, 0.002);
-[Num, Den, ~] = tfdata(sysd);
-vpa(Num{:}, 6)
-vpa(Den{:}, 6)
+% sysd = c2d(K, 0.002);
+% [Num, Den, ~] = tfdata(sysd);
+% vpa(Num{:}, 6)
+% vpa(Den{:}, 6)
 
 %% setting block properties from parameters
 % http://www.mathworks.com/help/simulink/ug/using-model-workspaces.html
 % http://www.mathworks.com/help/simulink/slref/simulink.modelworkspace.html#f29-123886
-hws = get_param('BB8_sim', 'modelworkspace'); 
+hws = get_param('BB8_sim', 'modelworkspace');
 hws.assignin('Kt', Kt);
+hws.assignin('Ke', Ke);
+hws.assignin('Ra_inv', 1/Ra);
+hws.assignin('IM', IM);
+hws.assignin('Il', Ilambda);
+hws.assignin('M', M);
+hws.assignin('R', R);
+hws.assignin('g', g);
+hws.assignin('l', lambda);
+hws.assignin('r', r);
+% hws.whos
 % set_param('BB8_sim/Motor_elec/Kt', 'Gain', num2str(Kt, 5));
-set_param('BB8_sim/Motor_elec/Ke', 'Gain', num2str(Ke, 5));
-set_param('BB8_sim/Motor_elec/Ra_inv', 'Gain', num2str(1/Ra, 5));
-set_param('BB8_sim/Plant/IM', 'Value', num2str(IM, 5));
-set_param('BB8_sim/Plant/Il', 'Value', num2str(Ilambda, 5));
-set_param('BB8_sim/Plant/M', 'Value', num2str(M, 5));
-set_param('BB8_sim/Plant/R', 'Value', num2str(R, 5));
-set_param('BB8_sim/Plant/g', 'Value', num2str(g, 5));
-set_param('BB8_sim/Plant/l', 'Value', num2str(lambda, 5));
-set_param('BB8_sim/Plant/r', 'Value', num2str(r, 5));
+% set_param('BB8_sim/Motor_elec/Ke', 'Gain', num2str(Ke, 5));
+% set_param('BB8_sim/Motor_elec/Ra_inv', 'Gain', num2str(1/Ra, 5));
+% set_param('BB8_sim/Plant/IM', 'Value', num2str(IM, 5));
+% set_param('BB8_sim/Plant/Il', 'Value', num2str(Ilambda, 5));
+% set_param('BB8_sim/Plant/M', 'Value', num2str(M, 5));
+% set_param('BB8_sim/Plant/R', 'Value', num2str(R, 5));
+% set_param('BB8_sim/Plant/g', 'Value', num2str(g, 5));
+% set_param('BB8_sim/Plant/l', 'Value', num2str(lambda, 5));
+% set_param('BB8_sim/Plant/r', 'Value', num2str(r, 5));
 
 [z, p, k] = zpkdata(K);
 setVal('K', 'Gain', k);
