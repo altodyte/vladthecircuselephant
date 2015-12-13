@@ -33,7 +33,7 @@ Jpsi = (r*N*L+r*P*K)/(2*pi*L+2*pi*P); % effective moment of inertia about motor 
 Kt = 2*0.61; % motor torque constant, taking into account 2 motors [...]
 Ke = 0.61; % motor emf constant [...]
 Ra = 2.5; % series resistance of motor [ohm]
-Bpsi = 3e-6; % effective viscous damping about the motor [N-m-s/rad]
+Bpsi = 2*3e-6; % effective viscous damping about the motor [N-m-s/rad]
 
 % derived values
 Km = Kt/(Ra*Bpsi + Kt*Ke);
