@@ -3,7 +3,7 @@
 #include "RF24.h"
 
 // Become the primary transmitter
-#define TX true
+#define TX false
 
 // Set up nRF24L01 radio on SPI bus plus chip enable (9) & slave select (UNO:10; MEGA:53)
 RF24 radio(9,SS);
@@ -35,7 +35,6 @@ void setup(void) {
   radio.setRetries(0, 0);
   radio.setDataRate(RF24_2MBPS);
   radio.setPALevel(RF24_PA_HIGH);
-  // radio.powerUp();
 
   #if TX
     radio.openWritingPipe(pipes[0]);
@@ -51,6 +50,7 @@ void loop(void) {
   #if TX
     // If there's Serial data ready to get
     if ( Serial.available() ) {
+      radio.powerUp();
       // Pull data from Serial and put it into packet
       packet.members.name = Serial.read();
       packet.members.value = Serial.parseFloat();
@@ -74,7 +74,8 @@ void loop(void) {
       while (!done) { // try sending until it's successful
         done = radio.read( &packet, PKT_SZ );
       }
-      Serial.print("Got payload "); Serial.print(packet.members.name); Serial.println(packet.members.value);
+      Serial.print(packet.members.name); Serial.println(packet.members.value, 5);
+      // Serial.print("Got payload "); Serial.print(packet.members.name); Serial.println(packet.members.value);
     }
   #endif
 }

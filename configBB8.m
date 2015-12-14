@@ -110,9 +110,9 @@ Mv1 = Kmv1/s/(tmv1*s+1); % algebraically-found velocity feedback motor TF
 % pzmap(K,Mp,G);
 % legend('K','Mp','G');
 % figure;
-% margin(K*Mp*G);
-% [Gm, Pm, Wgm, Wpm] = margin(K*Mp*G);
-% Pm
+margin(K*Mp*G);
+[Gm, Pm, Wgm, Wpm] = margin(K*Mp*G);
+Pm
 % step(minreal(K*Mp*G/(1+K*Mp*G)));
 % step(K*Mp*G/(1+K*Mp*G),20);
 % figure;
