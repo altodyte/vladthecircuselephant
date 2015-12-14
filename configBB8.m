@@ -43,15 +43,15 @@ tm = Ra*Jpsi/(Ra*Bpsi + Kt*Ke);
 %% compensator parameters
 % position minor loop around motor and lag compensator(s)
 Kv = 0; % motor velocity feedback loop gain
-Kp = 1; % motor position feedback loop gain
+Kp = 0.5; % motor position feedback loop gain
 % double lag
-% Kk = -8000; % K gain
-% tkp = 4; % K pole time constant
-% tkz = 1; % K zero time constant
-% single lag
-Kk = -8000; % K gain
-tkp = 8; % K pole time constant
+Kk = -4000; % K gain
+tkp = 4; % K pole time constant
 tkz = 1; % K zero time constant
+% single lag
+% Kk = -8000; % K gain
+% tkp = 8; % K pole time constant
+% tkz = 1; % K zero time constant
 
 % only integral compensator
 % Kk = 200; % gain
@@ -75,8 +75,8 @@ tmp = (sqrt(1+4*Kp*Kmv*tmv)-1)/(2*Kp*Kmv);
 %% compensator transfer functions
 % K = Kk; % proportional
 % K = Kk*(tkz*s+1)/s; % integral
-K = Kk*(tkz*s+1)/(tkp*s+1); % single lag
-% K = Kk*((tkz*s+1)/(tkp*s+1))^2; % double lag
+% K = Kk*(tkz*s+1)/(tkp*s+1); % single lag
+K = Kk*((tkz*s+1)/(tkp*s+1))^2; % double lag
 
 %% plant transfer function
 G = C*s^2/(tL*s+1)/(tL*s-1);
@@ -120,13 +120,17 @@ Mp = Kmp/(te*s-1)/(tmp*s+1); % algebraically-found
 % nyquist(-K*Mv*G);
 
 %% lag compensator, velocity minor loop, and position minor loop analysis
-% rlocus(K*Mp*G);
+figure;
+subplot(2,2,1);
+rlocus(K*Mp*G);
 % pzmap((K*Mp)/(1+K*Mp*G));
 % figure;
-% pzmap(K,Mp,G);
-% legend('K','Mp','G');
+subplot(2,2,2);
+pzmap(K,Mp,G);
+legend('K','Mp','G');
 % figure;
-% margin(K*Mp*G);
+subplot(2,2,3);
+margin(K*Mp*G);
 % figure
 % margin(-2000*Mp*G);
 % [Gm, Pm, Wgm, Wpm] = margin(K*Mp*G);
@@ -134,13 +138,14 @@ Mp = Kmp/(te*s-1)/(tmp*s+1); % algebraically-found
 % step(minreal(K*Mp*G/(1+K*Mp*G)));
 % step(K*Mp*G/(1+K*Mp*G),20);
 % figure;
-% nyquist(K*Mp*G);
+subplot(2,2,4);
+nyquist(K*Mp*G);
 % figure;
 
-sysd = c2d(K, 0.002)
-[Num, Den, ~] = tfdata(sysd);
-vpa(Num{:}, 10)
-vpa(Den{:}, 10)
+% sysd = c2d(K, 0.002)
+% [Num, Den, ~] = tfdata(sysd);
+% vpa(Num{:}, 10)
+% vpa(Den{:}, 10)
 
 %% setting block properties from parameters
 hws = get_param('BB8_sim', 'modelworkspace');
