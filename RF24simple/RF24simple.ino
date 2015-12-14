@@ -2,7 +2,7 @@
 #include "nRF24L01.h"
 #include "RF24.h"
 
-// Become the primary transmitter (ping out)
+// Become the primary transmitter
 #define TX true
 
 // Set up nRF24L01 radio on SPI bus plus chip enable (9) & slave select (UNO:10; MEGA:53)
@@ -11,10 +11,31 @@ RF24 radio(9,SS);
 // Radio pipe addresses for the 2 nodes to communicate.
 const uint64_t pipes[2] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL };
 
+// Random variables
+bool done = false;
+
+// Radio packet structure (PKT_SZ must match total size of PacketData_t)
+#define PKT_SZ 9
+typedef struct PacketData_t {
+  char name;
+  double value;
+};
+typedef union RadioPacket_t {
+  PacketData_t members;
+  byte bytes[PKT_SZ];
+};
+RadioPacket_t packet;
+
 void setup(void) {
   Serial.begin(250000);
+  Serial.setTimeout(1);
 
   radio.begin();
+  radio.setPayloadSize(PKT_SZ);
+  radio.setRetries(0, 0);
+  radio.setDataRate(RF24_2MBPS);
+  radio.setPALevel(RF24_PA_HIGH);
+  // radio.powerUp();
 
   #if TX
     radio.openWritingPipe(pipes[0]);
@@ -22,68 +43,38 @@ void setup(void) {
   #else
     radio.openWritingPipe(pipes[1]);
     radio.openReadingPipe(1,pipes[0]);
+    radio.startListening();
   #endif
-
-  radio.startListening();
 }
 
 void loop(void) {
   #if TX
-    // First, stop listening so we can talk.
-    radio.stopListening();
-
-    // Take the time, and send it.  This will block until complete
-    float time = millis();
-    Serial.print("Now sending "); Serial.println(time/1.0);
-    bool ok = radio.write( &time, sizeof(float) );
-
-    // Now, continue listening
-    radio.startListening();
-
-    // Wait here until we get a response, or timeout (250ms)
-    float started_waiting_at = millis();
-    bool timeout = false;
-    while ( !radio.available() && !timeout )
-      if (millis() - started_waiting_at > 200)
-        timeout = true;
-
-    // Describe the results
-    if ( timeout )
-      Serial.println("Response timed out");
-    else {
-      // Grab the response, compare, and send to debugging spew
-      float got_time;
-      radio.read( &got_time, sizeof(float) );
-      Serial.print("Got response "); Serial.println(got_time);
-    }
-
-    // Try again 1s later
-    // delay(100);
-  #else
-    // if there is data ready
-    if ( radio.available() )
-    {
-      // Dump the payloads until we've gotten everything
-      float got_time;
-      bool done = false;
-      while (!done)
-      {
-        // Fetch the payload, and see if this was the last one.
-        done = radio.read( &got_time, sizeof(float) );
-        Serial.print("Got payload "); Serial.println(got_time);
-
-        // Delay just a little bit to let the other unit make the transition to receiver
-        delay(20);
+    // If there's Serial data ready to get
+    if ( Serial.available() ) {
+      // Pull data from Serial and put it into packet
+      packet.members.name = Serial.read();
+      packet.members.value = Serial.parseFloat();
+      // Send packet over radio
+      done = false;
+      // int i = 0;
+      // long start = millis();
+      while (!done) { // try sending until it's successful
+        // ++i;
+        done = radio.write( packet.bytes, PKT_SZ );
       }
-      // First, stop listening so we can talk
-      radio.stopListening();
-
-      // Send the final one back.
-      radio.write( &got_time, sizeof(float) );
-      Serial.println("Sent response");
-
-      // Now, resume listening so we catch the next packets.
-      radio.startListening();
+      // long end = millis();
+      // Serial.print(end-start); Serial.print(" "); Serial.println(i);
+      // Serial.println(end-start);
+      Serial.print("Sent payload "); Serial.print(packet.members.name); Serial.println(packet.members.value);
+    }
+  #else
+    // If there's a payload ready to get
+    if ( radio.available() ) {
+      done = false;
+      while (!done) { // try sending until it's successful
+        done = radio.read( &packet, PKT_SZ );
+      }
+      Serial.print("Got payload "); Serial.print(packet.members.name); Serial.println(packet.members.value);
     }
   #endif
 }
