@@ -1,6 +1,6 @@
 function configBB8
-% BB8 % open simulink project
-% BB8_sim % open simulink project
+BB8 % open simulink project
+BB8_sim % open simulink project
 
 %% conversion factors
 in2m = convlength(1, 'in', 'm');
@@ -43,9 +43,9 @@ tm = Ra*Jpsi/(Ra*Bpsi + Kt*Ke);
 % position minor loop around motor
 Kv = 0; % motor velocity feedback loop gain
 Kp = 1; % motor position feedback loop gain
-Kk = -2500; % K gain
-tkp = 4; % K pole time constant
-tkz = 1; % K zero time constant
+Kk = -5000; % K gain
+tkp = 10; % K pole time constant
+tkz = 2/3; % K zero time constant
 
 % integral compensator
 Kk1 = 200; % K gain
@@ -68,8 +68,7 @@ tmv1 = tm/(1 + Kv1*Km);
 
 %% compensator analysis
 s = tf('s');
-K = Kk*((tkz*s+1)/(tkp*s+1))^2;
-% K = Kk;
+K = Kk*((tkz*s+1)/(tkp*s+1))62;
 Ma = Km/(tm*s+1);
 G = C*s^2/(tL*s+1)/(tL*s-1);
 Mv = Kmv/s/(tmv*s+1); % algebraically-found velocity feedback motor TF
@@ -111,16 +110,16 @@ Mv1 = Kmv1/s/(tmv1*s+1); % algebraically-found velocity feedback motor TF
 % pzmap(K,Mp,G);
 % legend('K','Mp','G');
 % figure;
-% margin(K*Mp*G);
-% [Gm, Pm, Wgm, Wpm] = margin(K*Mp*G);
-% Pm
+margin(K*Mp*G);
+[Gm, Pm, Wgm, Wpm] = margin(K*Mp*G);
+Pm
 % step(minreal(K*Mp*G/(1+K*Mp*G)));
 % step(K*Mp*G/(1+K*Mp*G),20);
 % figure;
 % nyquist(K*Mp*G);
 % figure;
 
-% sysd = c2d(K, 0.002)
+% sysd = c2d(K, 0.002);
 % [Num, Den, ~] = tfdata(sysd);
 % vpa(Num{:}, 6)
 % vpa(Den{:}, 6)

@@ -47,8 +47,6 @@ long enc3new = enc3.read();
 ****************************** Motor State Variables **************************
 ******************************************************************************/
 
-int pitchActuators = 0;
-int rollActuators = 0;
 double proportionalConstant = 6; 
 double killZone = 30.0; // not working because of rapid acceleration
 int deadZone = 2;
@@ -57,9 +55,9 @@ int loopDuration = 2; // loop should last as close to 2 milliseconds as possible
 long long nextLoop = 0;
 
 
-const unsigned char numC = 5;
+const unsigned char numC = 7;
 double constants[numC];
-const char inChars[] = {'a', 'b', 'c', 'k', 'p'};
+const char inChars[] = {'a', 'b', 'c', 'd', 'e', 'k', 'p'};
 
 double pitchPsi = 0;
 double pitchPsiSet = 0;
@@ -67,10 +65,12 @@ double pitchPsiError = 0;
 double pitchPhi = 0;
 double pitchPhiError = 0;
 double pitchVp = 0;
-double pitchVpLast = 0;
+double pitchVpLast1 = 0;
+double pitchVpLast2 = 0;
 double pitchVv = 0;
 double pitchVa = 0;
-double pitchPhiErrorLast = 0;
+double pitchPhiErrorLast1 = 0;
+double pitchPhiErrorLast2 = 0;
 
 double rollPsi = 0;
 double rollPsiSet = 0;
@@ -78,10 +78,12 @@ double rollPsiError = 0;
 double rollPhi = 0;
 double rollPhiError = 0;
 double rollVp = 0;
-double rollVpLast = 0;
+double rollVpLast1 = 0;
+double rollVpLast2 = 0;
 double rollVv = 0;
 double rollVa = 0;
-double rollPhiErrorLast = 0;
+double rollPhiErrorLast1 = 0;
+double rollPhiErrorLast2 = 0;
 
 
 void setup() {
@@ -127,8 +129,8 @@ void loop() {
     while (Serial.available()) {
       inChar = Serial.read();
       for (k = 0; k < numC; ++k) if (inChar == inChars[k]) EEPROM_writeDouble(k*4, constants[k] = Serial.parseFloat());
-      if (inChar == 'd') {
-        for (k = 0; k < numC; ++k) { Serial.print(constants[k]); Serial.print(" "); }
+      if (inChar == 'z') {
+        for (k = 0; k < numC; ++k) { Serial.print(constants[k], 5); Serial.print(" "); }
         Serial.println();
       }
     }
@@ -148,26 +150,32 @@ void loop() {
     pitchPsiError = pitchPsi - pitchPsiSet;
 
     // calculate control signals
-    rollVp = constants[2]*rollVpLast - constants[0]*rollPhiError + constants[1]*rollPhiErrorLast;
+    rollVp = constants[3]*rollVpLast1 - constants[4]*rollVpLast2 - constants[0]*rollPhiError + constants[1]*rollPhiErrorLast1 - constants[2]*rollPhiErrorLast2; // double lag
+    pitchVp = constants[3]*pitchVpLast1 - constants[4]*pitchVpLast2 - constants[0]*pitchPhiError + constants[1]*pitchPhiErrorLast1 - constants[2]*pitchPhiErrorLast2;
+    // rollVp = constants[2]*rollVpLast1 - constants[0]*rollPhiError + constants[1]*rollPhiErrorLast1; // single lag
+    // pitchVp = constants[2]*pitchVpLast1 - constants[0]*pitchPhiError + constants[1]*pitchPhiErrorLast1;
     rollVv = rollVp + constants[3]*rollPsiError;
     rollVa = voltageToMotorShield(rollVv);
-    // rollActuators = constants[4]*rollPhi; // p control
-    pitchVp = constants[2]*pitchVpLast - constants[0]*pitchPhiError + constants[1]*pitchPhiErrorLast;
     pitchVv = pitchVp + constants[3]*pitchPsiError;
-    pitchVa = voltageToMotorShield(pitchVv);
-    // pitchActuators = constants[4]*pitchPhi; // p control
+    pitchVa = voltageToMotorShield(pitchVv); 
+    // rollVa = constants[6]*rollPhi; // proportional
+    // pitchVa = constants[6]*pitchPhi;
 
     // save current values for next loop
-    rollPhiErrorLast = rollPhiError;
-    rollVpLast = rollVp;
-    pitchPhiErrorLast = pitchPhiError;
-    pitchVpLast = pitchVp;
+    rollPhiErrorLast2 = rollPhiErrorLast1;
+    rollVpLast2 = rollVpLast1;
+    pitchPhiErrorLast2 = pitchPhiErrorLast1;
+    pitchVpLast2 = pitchVpLast1;
+    rollPhiErrorLast1 = rollPhiError;
+    rollVpLast1 = rollVp;
+    pitchPhiErrorLast1 = pitchPhiError;
+    pitchVpLast1 = pitchVp;
 
     // set motor control value array, doing sign conversion for motor orientation correction
-    mOutVals[0] = -rollActuators;
-    mOutVals[2] = rollActuators;
-    mOutVals[1] = pitchActuators;
-    mOutVals[3] = -pitchActuators;
+    mOutVals[0] = coerce(-rollVa);
+    mOutVals[2] = coerce(rollVa);
+    mOutVals[1] = coerce(pitchVa);
+    mOutVals[3] = coerce(-pitchVa);
 
     // proSer.print(roll, 5);
     // proSer.print(' ');
@@ -177,9 +185,9 @@ void loop() {
     // proSer.print(' ');
     // proSer.println(pitchVp, 5);
 
-    // proSer.print(rollActuators);
+    // proSer.print(rollVa);
     // proSer.print(' ');
-    // proSer.println(pitchActuators);
+    // proSer.println(pitchVa);
     
     // send motor commands every other loop, because motor controller is too slow to take commands every loop
     if (++k % 2 == 0) {
@@ -219,6 +227,13 @@ int coerce(int in, int rangeMin, int rangeMax){
   // Bound integer input to range determined by min and max
   if (in<rangeMin){ return rangeMin; }
   else if (in>rangeMax){ return rangeMax; }
+  else { return in; }
+}
+
+int coerce(double in){
+  // Bound integer input to range determined by min and max
+  if (in<-255){ return -255; }
+  else if (in>255){ return 255; }
   else { return in; }
 }
 
