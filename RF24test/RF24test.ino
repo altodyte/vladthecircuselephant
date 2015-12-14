@@ -3,7 +3,7 @@
 #include "RF24.h"
 
 // Become the primary transmitter (ping out)
-#define TX false
+#define TX true
 
 // Set up nRF24L01 radio on SPI bus plus chip enable (9) & slave select (UNO:10; MEGA:53)
 RF24 radio(9,SS);
@@ -29,12 +29,10 @@ void setup(void) {
 
 void loop(void) {
   #if TX
-  {
     // First, stop listening so we can talk.
     radio.stopListening();
 
     // Take the time, and send it.  This will block until complete
-
     float time = millis();
     Serial.print("Now sending "); Serial.println(time/1.0);
     bool ok = radio.write( &time, sizeof(float) );
@@ -45,7 +43,7 @@ void loop(void) {
     // Wait here until we get a response, or timeout (250ms)
     float started_waiting_at = millis();
     bool timeout = false;
-    while ( ! radio.available() && ! timeout )
+    while ( !radio.available() && !timeout )
       if (millis() - started_waiting_at > 200)
         timeout = true;
 
@@ -61,9 +59,7 @@ void loop(void) {
 
     // Try again 1s later
     // delay(100);
-  }
   #else
-  {
     // if there is data ready
     if ( radio.available() )
     {
@@ -89,6 +85,5 @@ void loop(void) {
       // Now, resume listening so we catch the next packets.
       radio.startListening();
     }
-  }
   #endif
 }
