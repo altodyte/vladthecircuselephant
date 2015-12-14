@@ -7,6 +7,7 @@ in2m = convlength(1, 'in', 'm');
 
 %% plant constants
 % global
+s = tf('s');
 g = 9.8;
 
 % ball M
@@ -40,19 +41,24 @@ Km = Kt/(Ra*Bpsi + Kt*Ke);
 tm = Ra*Jpsi/(Ra*Bpsi + Kt*Ke);
 
 %% compensator parameters
-% position minor loop around motor
+% position minor loop around motor and lag compensator(s)
 Kv = 0; % motor velocity feedback loop gain
 Kp = 1; % motor position feedback loop gain
-Kk = -2500; % K gain
-tkp = 4; % K pole time constant
+% double lag
+% Kk = -8000; % K gain
+% tkp = 4; % K pole time constant
+% tkz = 1; % K zero time constant
+% single lag
+Kk = -8000; % K gain
+tkp = 8; % K pole time constant
 tkz = 1; % K zero time constant
 
-% integral compensator
-Kk1 = 200; % K gain
-tkz1 = 1/4; % K zero time constant
+% only integral compensator
+% Kk = 200; % gain
+% tkz = 1/4; % zero time constant
 
-% velocity minor loop around motor
-Kv1 = 0; % motor velocity feedback loop gain
+% only velocity minor loop around motor
+% Kv = 0; % motor velocity feedback loop gain
 
 %% compensator derived values
 % position minor loop around motor
@@ -63,55 +69,66 @@ te = (sqrt(1+4*Kp*Kmv*tmv)+1)/(2*Kp*Kmv);
 tmp = (sqrt(1+4*Kp*Kmv*tmv)-1)/(2*Kp*Kmv);
 
 % velocity minor loop around motor
-Kmv1 = Km/(1 + Kv1*Km);
-tmv1 = tm/(1 + Kv1*Km);
+% Kmv = Km/(1 + Kv*Km);
+% tmv = tm/(1 + Kv*Km);
+ 
+%% compensator transfer functions
+% K = Kk; % proportional
+% K = Kk*(tkz*s+1)/s; % integral
+K = Kk*(tkz*s+1)/(tkp*s+1); % single lag
+% K = Kk*((tkz*s+1)/(tkp*s+1))^2; % double lag
 
-%% compensator analysis
-s = tf('s');
-K = Kk*((tkz*s+1)/(tkp*s+1))^2;
-% K = Kk;
-Ma = Km/(tm*s+1);
+%% plant transfer function
 G = C*s^2/(tL*s+1)/(tL*s-1);
-Mv = Kmv/s/(tmv*s+1); % algebraically-found velocity feedback motor TF
-% Mv2 = minreal(M/(1+Kv*M)/s);
-Mp = Kmp/(te*s-1)/(tmp*s+1); % algebraically-found position feedback motor TF
-% Mp2 = minreal(Mv2/(1-Kp*Mv2));
 
-%% proportional compensator
+%% motor transfer functions
+% motor armature voltage to velocity
+Ma = Km/(tm*s+1);
+
+% pre-velocity voltage to position TF with velocity feedback
+Mv = Kmv/s/(tmv*s+1); % algebraically-found
+% Mv = minreal(M/(1+Kv*M)/s); % symbolically-found TF
+
+% pre-position voltage to position TF with position feedback
+Mp = Kmp/(te*s-1)/(tmp*s+1); % algebraically-found
+% Mp = minreal(Mv/(1-Kp*Mv)); % symbolically-found TF
+
+%% proportional compensator analysis
 % rlocus(-M/s*G);
 % figure;
 % pzmap(M/s,G);
 % legend('M','G');
 
-%% integral compensator
-K1 = Kk1*(tkz1*s+1)/s;
-% rlocus(-K1*M/s*G);
+%% integral compensator analysis
+% rlocus(-K*M/s*G);
 % figure;
-% pzmap(K1,M/s,G);
-% legend('K1','M','G');
+% pzmap(K,M/s,G);
+% legend('K','M','G');
 % figure;
-% margin(-K1*M/s*G);
+% margin(-K*M/s*G);
 % figure;
-% step(-K1*M/s*G/(1-K1*M/s*G));
+% step(-K*M/s*G/(1-K*M/s*G));
 % figure;
-% nyquist(-K1*M/s*G);
+% nyquist(-K*M/s*G);
 
-%% velocity minor loop around motor
-Mv1 = Kmv1/s/(tmv1*s+1); % algebraically-found velocity feedback motor TF
-% rlocus(-K1*Mv1*G);
+%% integral compensator and velocity minor loop analysis
+% rlocus(-K*Mv*G);
 % figure;
-% pzmap(K1,Mv1,G);
-% legend('K1','Mv1','G');
+% pzmap(K,Mv,G);
+% legend('K','Mv','G');
 % figure;
-% nyquist(-K1*Mv1*G);
+% nyquist(-K*Mv*G);
 
-%% position minor loop around motor
+%% lag compensator, velocity minor loop, and position minor loop analysis
 % rlocus(K*Mp*G);
+% pzmap((K*Mp)/(1+K*Mp*G));
 % figure;
 % pzmap(K,Mp,G);
 % legend('K','Mp','G');
 % figure;
 % margin(K*Mp*G);
+% figure
+% margin(-2000*Mp*G);
 % [Gm, Pm, Wgm, Wpm] = margin(K*Mp*G);
 % Pm
 % step(minreal(K*Mp*G/(1+K*Mp*G)));
@@ -120,18 +137,16 @@ Mv1 = Kmv1/s/(tmv1*s+1); % algebraically-found velocity feedback motor TF
 % nyquist(K*Mp*G);
 % figure;
 
-% sysd = c2d(K, 0.002)
-% [Num, Den, ~] = tfdata(sysd);
-% vpa(Num{:}, 6)
-% vpa(Den{:}, 6)
+sysd = c2d(K, 0.002)
+[Num, Den, ~] = tfdata(sysd);
+vpa(Num{:}, 10)
+vpa(Den{:}, 10)
 
 %% setting block properties from parameters
-% http://www.mathworks.com/help/simulink/ug/using-model-workspaces.html
-% http://www.mathworks.com/help/simulink/slref/simulink.modelworkspace.html#f29-123886
 hws = get_param('BB8_sim', 'modelworkspace');
 hws.assignin('Kt', Kt);
 hws.assignin('Ke', Ke);
-hws.assignin('Ra_inv', 1/Ra);
+hws.assignin('Ra', Ra);
 hws.assignin('IM', IM);
 hws.assignin('Il', Ilambda);
 hws.assignin('M', M);
@@ -140,42 +155,29 @@ hws.assignin('g', g);
 hws.assignin('l', lambda);
 hws.assignin('r', r);
 % hws.whos
-% set_param('BB8_sim/Motor_elec/Kt', 'Gain', num2str(Kt, 5));
-% set_param('BB8_sim/Motor_elec/Ke', 'Gain', num2str(Ke, 5));
-% set_param('BB8_sim/Motor_elec/Ra_inv', 'Gain', num2str(1/Ra, 5));
-% set_param('BB8_sim/Plant/IM', 'Value', num2str(IM, 5));
-% set_param('BB8_sim/Plant/Il', 'Value', num2str(Ilambda, 5));
-% set_param('BB8_sim/Plant/M', 'Value', num2str(M, 5));
-% set_param('BB8_sim/Plant/R', 'Value', num2str(R, 5));
-% set_param('BB8_sim/Plant/g', 'Value', num2str(g, 5));
-% set_param('BB8_sim/Plant/l', 'Value', num2str(lambda, 5));
-% set_param('BB8_sim/Plant/r', 'Value', num2str(r, 5));
+
+% setGain('Kv', Kv);
+% setGain('Kp', Kp);
+hws.assignin('Kv', Kv);
+hws.assignin('Kp', Kp);
 
 [z, p, k] = zpkdata(K);
-setVal('K', 'Gain', k);
-setVal('K', 'Poles', p{:}');
-setVal('K', 'Zeros', z{:}');
-% setVal('K', 'Gain', Kk/(tkp*tkz));
-% setVal('K', 'Poles', -1/tkp);
-% setVal('K', 'Zeros', -1/tkz);
+hws.assignin('Kgain', k);
+hws.assignin('Kpoles', p{:});
+hws.assignin('Kzeros', z{:});
+% setVal('K', 'Gain', k);
+% setVal('K', 'Poles', p{:}');
+% setVal('K', 'Zeros', z{:}');
 
-[z, p, k] = zpkdata(Ma);
-setVal('M', 'Gain', k);
-setVal('M', 'Poles', p{:}');
-setVal('M', 'Zeros', z{:}');
-% setVal('M', 'Gain', Km/tm);
-% setVal('M', 'Poles', -1/tm);
-% setVal('M', 'Zeros', []);
-setGain('Kv', Kv);
-setGain('Kp', Kp);
+% [z, p, k] = zpkdata(Ma);
+% setVal('M', 'Gain', k);
+% setVal('M', 'Poles', p{:}');
+% setVal('M', 'Zeros', z{:}');
 
-[z, p, k] = zpkdata(G);
-setVal('G', 'Gain', k);
-setVal('G', 'Poles', p{:}');
-setVal('G', 'Zeros', z{:}');
-% setVal('G', 'Gain', C/tL^2);
-% setVal('G', 'Poles', [-1/tL 1/tL]);
-% setVal('G', 'Zeros', [0 0]);
+% [z, p, k] = zpkdata(G);
+% setVal('G', 'Gain', k);
+% setVal('G', 'Poles', p{:}');
+% setVal('G', 'Zeros', z{:}');
 
     function setVal(block, prop, val)
         set_param(['BB8/' block], prop,  ['[' num2str(val, 5) ']']);
