@@ -1,6 +1,13 @@
 function configBB8
-% BB8 % open simulink project
-% BB8_sim % open simulink project
+BB8 % open simulink project
+BB8_sim % open simulink project
+
+%% psi input model (https://en.wikipedia.org/wiki/Smoothstep)
+stepMax = 10; % final value of step [rad]
+stepStart = 1; % start time of step [s]
+stepDur = 4; % duration of step [s]
+% stepCoefs = stepMax*[-2 3 0 0]; % coefficients of smoothstep
+stepCoefs = stepMax*[6 -15 10 0 0 0]; % coefficients of smootherstep
 
 %% conversion factors
 in2m = convlength(1, 'in', 'm');
@@ -120,27 +127,23 @@ Mp = Kmp/(te*s-1)/(tmp*s+1); % algebraically-found
 % nyquist(-K*Mv*G);
 
 %% lag compensator, velocity minor loop, and position minor loop analysis
-figure;
-subplot(2,2,1);
-rlocus(K*Mp*G);
 % pzmap((K*Mp)/(1+K*Mp*G));
-% figure;
-subplot(2,2,2);
-pzmap(K,Mp,G);
-legend('K','Mp','G');
-% figure;
-subplot(2,2,3);
-margin(K*Mp*G);
-% figure
 % margin(-2000*Mp*G);
 % [Gm, Pm, Wgm, Wpm] = margin(K*Mp*G);
 % Pm
 % step(minreal(K*Mp*G/(1+K*Mp*G)));
 % step(K*Mp*G/(1+K*Mp*G),20);
+
 % figure;
-subplot(2,2,4);
-nyquist(K*Mp*G);
-% figure;
+% subplot(2,2,1);
+% rlocus(K*Mp*G);
+% subplot(2,2,2);
+% pzmap(K,Mp,G);
+% legend('K','Mp','G');
+% subplot(2,2,3);
+% margin(K*Mp*G);
+% subplot(2,2,4);
+% nyquist(K*Mp*G);
 
 % sysd = c2d(K, 0.002)
 % [Num, Den, ~] = tfdata(sysd);
@@ -159,6 +162,10 @@ hws.assignin('R', R);
 hws.assignin('g', g);
 hws.assignin('l', lambda);
 hws.assignin('r', r);
+hws.assignin('stepMax', stepMax);
+hws.assignin('stepStart', stepStart);
+hws.assignin('stepDur', stepDur);
+hws.assignin('stepCoefs', stepCoefs);
 % hws.whos
 
 % setGain('Kv', Kv);
