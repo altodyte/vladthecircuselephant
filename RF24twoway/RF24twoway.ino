@@ -14,7 +14,9 @@ RF24 radio(9, SS);
 const uint64_t pipes[2] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL };
 
 // Random variables
-bool done = false;
+bool done = false; // are we done sending?
+bool newCommand = false; // is there a new command to send?
+unsigned long started_waiting_at = 0; // time started waiting (for timeout detection)
 
 // Radio packet structures (packet size must match total size of struct/union)
 #define CMD_SZ 5
@@ -65,6 +67,7 @@ void setup(void) {
 
 void loop(void) {
   #if TX
+
     // If there's a data packet ready to get
     if (radio.available()) {
       // Try reading data until it's successful
@@ -72,55 +75,104 @@ void loop(void) {
       while (!done) {
         done = radio.read(dataPacket.bytes, DATA_SZ);
       }
-      Serial.print("Data received at "); Serial.println(dataPacket.members.time);
-      radio.stopListening();
+      // Write binary data packet to Serial
+      Serial.write(dataPacket.bytes, DATA_SZ);
 
-      // Wait a bit for RX to start listening
-      delay(1);
+      // Write bytes of data packet to Serial as ASCII
+      // for (int i = 0; i < DATA_SZ; ++i) {
+      //   Serial.print(dataPacket.bytes[i]);
+      //   Serial.print(" ");
+      // }
+      // Serial.println();
 
-      // Wake up radio so it sends quickly
-      radio.powerUp();
-      // Try sending command until it's successful
-      done = false;
-      while (!done) {
-        // ++i;
-        done = radio.write(commandPacket.bytes, CMD_SZ);
+      // Display timestamp of data packet we just received
+      // Serial.print("Data received from ");
+      // Serial.println(dataPacket.members.time);
+
+      // Display (as ASCII) data (received as binary)
+      // Serial.print("Data ");
+      // Serial.print(dataPacket.members.pitchPsi);
+      // Serial.print(" ");
+      // Serial.print(dataPacket.members.pitchPhi);
+      // Serial.print(" ");
+      // Serial.print(dataPacket.members.pitchVa);
+      // Serial.print(" ");
+      // Serial.print(dataPacket.members.rollPsi);
+      // Serial.print(" ");
+      // Serial.print(dataPacket.members.rollPhi);
+      // Serial.print(" ");
+      // Serial.print(dataPacket.members.rollVa);
+      // Serial.print(" received from ");
+      // Serial.println(dataPacket.members.time);
+
+      // Send command only if there's a new one (otherwise, send nothing and let RX timeout)
+      if (newCommand) {
+        radio.stopListening();
+
+        // Wait a bit for RX to start listening (may not be necessary)
+        // delay(1);
+
+        // Wake up radio so it sends quickly
+        radio.powerUp();
+        // Try sending command until it's successful
+        done = false;
+        while (!done) {
+          done = radio.write(commandPacket.bytes, CMD_SZ);
+        }
+        newCommand = false;
+        // Serial.print("Sent command ");
+        // Serial.print(commandPacket.members.name);
+        // Serial.println(commandPacket.members.value);
+
+        // Now, resume listening so we catch the next data packet
+        radio.startListening();
       }
-      Serial.println("Sent command");
-      // Serial.print("Sent command "); Serial.print(packet.members.name); Serial.println(packet.members.value);
-
-      // Now, resume listening so we catch the next data packet
-      radio.startListening();
     }
     // There's a command packet ready to be sent
     if (Serial.available()) {
       // Pull data from Serial and put it into packet
       commandPacket.members.name = Serial.read();
       commandPacket.members.value = Serial.parseFloat();
+      newCommand = true;
     }
+
   #else
+
     // If there is data ready to be sent
     if (Serial.available()) {
-      // Pull data from Serial and put it into packet
-      Serial.readBytes(dataPacket.bytes, DATA_SZ);
+      // Pull binary data from Serial and put it into packet
+      // Serial.readBytes(dataPacket.bytes, DATA_SZ);
+
+      // Pull ASCII data from Serial and put it w/timestamp into packet
+      dataPacket.members.time = millis();
+      dataPacket.members.pitchPsi = Serial.parseFloat();
+      Serial.read();
+      dataPacket.members.pitchPhi = Serial.parseFloat();
+      Serial.read();
+      dataPacket.members.pitchVa = Serial.parseFloat();
+      Serial.read();
+      dataPacket.members.rollPsi = Serial.parseFloat();
+      Serial.read();
+      dataPacket.members.rollPhi = Serial.parseFloat();
+      Serial.read();
+      dataPacket.members.rollVa = Serial.parseFloat();
 
       // Wake up radio so it sends quickly
       radio.powerUp();
       // Try sending data until it's successful
       done = false;
       while (!done) {
-        // ++i;
         done = radio.write(dataPacket.bytes, DATA_SZ);
       }
 
-      // Now, resume listening so we catch the next data packet
+      // Now, resume listening so we catch the next command packet
       radio.startListening();
 
-      // Wait here until we get a response, or timeout (5 ms)
-      float started_waiting_at = millis();
+      // Wait here until we get a response, or timeout (3 ms)
+      started_waiting_at = millis();
       bool timeout = false;
       while ( !radio.available() && !timeout )
-        if (millis() - started_waiting_at > 5)
+        if (millis() - started_waiting_at > 3)
           timeout = true;
 
       // Receive command as bytes, then send as ASCII
@@ -134,6 +186,7 @@ void loop(void) {
       // Stop listening so we can send quickly when new data comes in
       radio.stopListening();
     }
+
   #endif
 }
 

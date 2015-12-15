@@ -2,20 +2,12 @@
 #include <Adafruit_MotorShield.h>
 #include "utility/Adafruit_PWMServoDriver.h"
 
-/******************************************************************************
-************** OBJECTS AND PIN-DEPENDENT DECLARATIONS *************************
-******************************************************************************/
-
 #define LED_PIN 13
 bool blinkState = false;
 
 Adafruit_MotorShield AFMS = Adafruit_MotorShield(); 
 
 Adafruit_DCMotor* motors[4];
-// Adafruit_DCMotor *motor0 = AFMS.getMotor(1);
-// Adafruit_DCMotor *motor1 = AFMS.getMotor(2);
-// Adafruit_DCMotor *motor2 = AFMS.getMotor(3);
-// Adafruit_DCMotor *motor3 = AFMS.getMotor(4);
 
 HardwareSerial & masterSer = Serial;
 char inChar;
@@ -28,6 +20,7 @@ unsigned char maxj;
 unsigned char j;
 
 void setup() {
+  // create four motor objects
   for (j = 0; j < 4; ++j) {
     motors[j] = AFMS.getMotor(j+1);
   }
@@ -39,9 +32,8 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
 
   // Initialize motor shield
-  // Serial.println("Initializing AFMS I2C device...");
   AFMS.begin();
-  fuck(); // kills motors
+  stopMotors(); // kills motors
 }
 
 long long startTime = 0;
@@ -60,18 +52,21 @@ void loop() {
     else if (inChar == 'd') mnew[3] = masterSer.parseInt();
   }
 
-  // for (j = 0; j < 4; ++j) {
-  //   Serial.print(mnew[j]);
-  //   Serial.print(' ');
-  // }
-  // Serial.println();
-  
+  // print previous motor values
   // for (j = 0; j < 4; ++j) {
   //   Serial.print(mprev[j]);
   //   Serial.print(' ');
   // }
   // Serial.println();
 
+  // print new (requested) motor values)
+  // for (j = 0; j < 4; ++j) {
+  //   Serial.print(mnew[j]);
+  //   Serial.print(' ');
+  // }
+  // Serial.println();
+
+  // find which motor's current value varies most from its new value
   maxj = 0;
   maxdiff = 0;
   for (j = 0; j < 4; ++j) {
@@ -82,23 +77,24 @@ void loop() {
     }
   }
 
-  // Serial.println(maxj);
+  // print which motor was found to have the greatest difference
+  // Serial.print(maxj);
+  // Serial.print(" ");
   // Serial.println(maxdiff);
 
-  // takes 2 ms to write new speed to motors
+  // set motor which has the largest requested change in speed
   if (maxdiff != 0) {
     mprev[maxj] = mnew[maxj];
     mset(motors[maxj], mnew[maxj]);
   }
-
 }
 
-void fuck(){
-  // Serial.println("KILL MOTORS");
+void stopMotors() {
   for (j = 0; j < 4; ++j) mset(motors[j], 0);
 }
 
-void mset(Adafruit_DCMotor* m, int i){
+// takes 2 ms to write new speed to motors
+void mset(Adafruit_DCMotor* m, int i) {
   if (i==0) {
     m->run(RELEASE);
     m->setSpeed(0);
