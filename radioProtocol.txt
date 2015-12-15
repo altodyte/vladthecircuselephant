@@ -1,0 +1,8 @@
+Mega sends 28-byte data packets every 10 ms to RX over serial
+when RX sees data packet in its serial buffer, switch to transmit and send it to TX over radio
+after data packet is sent, switch to listening to wait for response
+if response is received, do stuff with it
+
+when TX sees data packet over radio, forward it out over serial and switch to transmit (wait 1ms)
+transmit 5-byte command packet if one came in over serial, otherwise just send ack back to RX
+once transmit is done, switch back to listening for next data packet

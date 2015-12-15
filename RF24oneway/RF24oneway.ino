@@ -15,7 +15,7 @@ const uint64_t pipes[2] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL };
 bool done = false;
 
 // Radio packet structure (PKT_SZ must match total size of PacketData_t)
-#define PKT_SZ 9
+#define PKT_SZ 5
 typedef struct PacketData_t {
   char name;
   double value;
@@ -74,7 +74,7 @@ void loop(void) {
       while (!done) { // try sending until it's successful
         done = radio.read( &packet, PKT_SZ );
       }
-      Serial.print(packet.members.name); Serial.println(packet.members.value, 5);
+      Serial.print(packet.members.name); Serial.println(packet.members.value, 6);
       // Serial.print("Got payload "); Serial.print(packet.members.name); Serial.println(packet.members.value);
     }
   #endif
