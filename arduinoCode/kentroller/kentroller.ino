@@ -14,8 +14,7 @@ static union {
   unsigned long currTime;
   byte currTimeBytes[4];
 };
-
-
+#define getSign(x) (x > 0) - (x < 0)
 
 // encoder variables
 // Change these two numbers to the pins connected to your encoder.
@@ -44,6 +43,7 @@ long enc3new = enc3.read();
 // motor variables
 char mOutNames[] = {'a', 'b', 'c', 'd'};
 int mOutVals[4];
+int deadZone = 0.5; // motor deadzone in volts
 
 // controller variables
 const unsigned char numC = 7;
@@ -141,16 +141,16 @@ void loop() {
     pitchPsiError = pitchPsi - pitchPsiSet;
 
     // calculate control signals
-    rollVp = constants[3]*rollVpLast1 - constants[4]*rollVpLast2 - constants[0]*rollPhiError + constants[1]*rollPhiErrorLast1 - constants[2]*rollPhiErrorLast2; // double lag
-    pitchVp = constants[3]*pitchVpLast1 - constants[4]*pitchVpLast2 - constants[0]*pitchPhiError + constants[1]*pitchPhiErrorLast1 - constants[2]*pitchPhiErrorLast2;
+    // rollVp = constants[3]*rollVpLast1 - constants[4]*rollVpLast2 - constants[0]*rollPhiError + constants[1]*rollPhiErrorLast1 - constants[2]*rollPhiErrorLast2; // double lag
+    // pitchVp = constants[3]*pitchVpLast1 - constants[4]*pitchVpLast2 - constants[0]*pitchPhiError + constants[1]*pitchPhiErrorLast1 - constants[2]*pitchPhiErrorLast2;
     // rollVp = constants[2]*rollVpLast1 - constants[0]*rollPhiError + constants[1]*rollPhiErrorLast1; // single lag
     // pitchVp = constants[2]*pitchVpLast1 - constants[0]*pitchPhiError + constants[1]*pitchPhiErrorLast1;
     rollVv = rollVp + constants[3]*rollPsiError; // single or double lag
     rollVa = rollVv;
     pitchVv = pitchVp + constants[3]*pitchPsiError;
     pitchVa = pitchVv;
-    // rollVa = constants[6]*rollPhi; // proportional
-    // pitchVa = constants[6]*pitchPhi;
+    rollVa = constants[6]*rollPhi; // proportional
+    pitchVa = constants[6]*pitchPhi;
 
     // save current values for next loop
     rollPhiErrorLast2 = rollPhiErrorLast1;
@@ -163,10 +163,10 @@ void loop() {
     pitchVpLast1 = pitchVp;
 
     // set motor control value array, doing sign conversion for motor orientation correction
-    mOutVals[0] = coerce(voltageToMotorShield(-rollVa));
-    mOutVals[2] = coerce(voltageToMotorShield(rollVa));
-    mOutVals[1] = coerce(voltageToMotorShield(pitchVa));
-    mOutVals[3] = coerce(voltageToMotorShield(-pitchVa));
+    mOutVals[0] = coerce(voltageToMotorShield(fixDeadZone(-rollVa)));
+    mOutVals[2] = coerce(voltageToMotorShield(fixDeadZone(rollVa)));
+    mOutVals[1] = coerce(voltageToMotorShield(fixDeadZone(pitchVa)));
+    mOutVals[3] = coerce(voltageToMotorShield(fixDeadZone(-pitchVa)));
 
     // proSer.print(roll, 5);
     // proSer.print(' ');
@@ -198,6 +198,10 @@ void stopMotors(){
     sysSer.print(mOutNames[j]);
     sysSer.print(0);
   }
+}
+
+double fixDeadZone(double in) {
+  return in + deadZone*getSign(in);
 }
 
 int coerce(double in){
