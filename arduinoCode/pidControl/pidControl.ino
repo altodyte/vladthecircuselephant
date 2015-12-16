@@ -7,6 +7,7 @@
 // misc variables
 // #define DEBUG
 bool spew = true;
+bool driving = true;
 bool blinkState = false;
 unsigned char loopDuration = 10; // loop should last as close to x milliseconds as possible
 unsigned long nextLoop = 0;
@@ -138,14 +139,17 @@ void loop() {
       if (inChar == 'w') {
         spew = !spew;
       }
+      if (inChar == 'x') {
+        driving = !driving;
+      }
     }
 
     // calculate phi errors
     rollPhiError = 0 - rollPhi;
     pitchPhiError = 0 - pitchPhi;
 
-    if (abs(rollPhiError - rollPhiErrorLast1) > 0.05) { rollPhiError = 0; rollPhi = 0; }
-    if (abs(pitchPhiError - pitchPhiErrorLast1) > 0.05) { pitchPhiError = 0; pitchPhi = 0; }
+    if (abs(rollPhiError - rollPhiErrorLast1) > 0.5) { rollPhiError = 0; rollPhi = 0; }
+    if (abs(pitchPhiError - pitchPhiErrorLast1) > 0.5) { pitchPhiError = 0; pitchPhi = 0; }
 
     // calculate phi error derivatives
     rollPhiErrorDeriv = 1000.0*(rollPhiError-rollPhiErrorLast1)/loopDuration;
@@ -196,10 +200,14 @@ void loop() {
     mOutVals[1] = coerce(voltageToMotorShield(fixDeadZone(-pitchVa)));
     mOutVals[3] = coerce(voltageToMotorShield(fixDeadZone(pitchVa)));
     
-    for (j = 0; j < 4; ++j) {
-      sysSer.print(mOutNames[j]);
-      sysSer.print(mOutVals[j]);
-      // sysSer.write(mOutVals, 8);
+    if (driving) {
+      for (j = 0; j < 4; ++j) {
+        sysSer.print(mOutNames[j]);
+        sysSer.print(mOutVals[j]);
+        // sysSer.write(mOutVals, 8);
+      }
+    } else {
+      stopMotors();
     }
     if (spew){
       Serial.write(currTimeBytes, 4);
