@@ -51,6 +51,7 @@ double constants[numC];
 const char inChars[] = {'a', 'b', 'c', 'd', 'e', 'k', 'P','I','D','R','Y','H'}; 
 
 bool spew = true;
+double deadZone = 0.5;
 
 // PITCH
 // PSI
@@ -65,7 +66,7 @@ double pitchPhiErrorDeriv = 0;
 // Commands / Voltages
 double pitchVp = 0, pitchVpLast1 = 0, pitchVpLast2 = 0;
 double pitchVv = 0;
-long pitchVa = 0;
+double pitchVa = 0;
 
 // ROLL
 // PSI
@@ -80,7 +81,7 @@ double rollPhiErrorDeriv = 0;
 // Commands / Voltages
 double rollVp = 0, rollVpLast1 = 0, rollVpLast2 = 0;
 double rollVv = 0;
-long rollVa = 0;
+double rollVa = 0;
 
 // pointers to the values we're sending out for logging
 double* outVals[] = {&pitchPsi, &pitchPhi, &pitchVa, &rollPsi, &rollPhi, &rollVa};
@@ -163,8 +164,8 @@ void loop() {
     // control from psi
     pitchVp = pitchVp - constants[6]*pitchPsiError -constants[7]*0 - constants[8]*pitchPsiErrorDeriv;
 
-    rollVa = long(rollVp);
-    pitchVa = long(pitchVp);
+    rollVa = rollVp;
+    pitchVa = pitchVp;
 
     // save current values for next loop
     rollPhiErrorLast2 = rollPhiErrorLast1;
