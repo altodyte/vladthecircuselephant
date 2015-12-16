@@ -213,9 +213,9 @@ void loop() {
 
             if (stabilized) { // are we already stabilized?
                 Serial.print('r');
-                Serial.print(-ypr[2] - rollOffset, 3);
+                Serial.print(-ypr[2] - rollOffset, 4);
                 Serial.print('p');
-                Serial.println(ypr[1] - pitchOffset, 3);
+                Serial.println(ypr[1] - pitchOffset, 4);
             } else if (abs(rollLast + ypr[2]) < 0.0001 && abs(pitchLast - ypr[1]) < 0.0001) { // have we just stabilized?
                 stabilized = true;
                 beatPeriod = 1000;
