@@ -6,6 +6,7 @@
 
 // misc variables
 // #define DEBUG
+bool spew = true;
 bool blinkState = false;
 unsigned char loopDuration = 10; // loop should last as close to x milliseconds as possible
 unsigned long nextLoop = 0;
@@ -43,15 +44,13 @@ long enc3new = enc3.read();
 // motor variables
 char mOutNames[] = {'a', 'b', 'c', 'd'};
 int mOutVals[4];
+double deadZone = 0.5;
 
 // controller variables
 const unsigned char numC = 12;
 double constants[numC];
 // a, b, c, d, e, k_p, P_phi, I_phi, D_phi, P_psi, I_psi, D_psi
 const char inChars[] = {'a', 'b', 'c', 'd', 'e', 'k', 'P','I','D','R','Y','H'}; 
-
-bool spew = true;
-double deadZone = 0.5;
 
 // PITCH
 // PSI
@@ -128,6 +127,7 @@ void loop() {
       inChar = Serial.read();
       for (j = 0; j < numC; ++j) if (inChar == inChars[j]) EEPROM_writeDouble(j*4, constants[j] = Serial.parseFloat());
       if (inChar == 'z') {
+        Serial.println();
         for (j = 0; j < numC; ++j) { Serial.print(constants[j], 5); Serial.print(" "); }
         Serial.println();
       }
