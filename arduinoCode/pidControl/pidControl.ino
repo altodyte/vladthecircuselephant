@@ -14,6 +14,7 @@ static union {
   unsigned long currTime;
   byte currTimeBytes[4];
 };
+#define getSign(x) (x > 0) - (x < 0)
 
 // encoder variables
 // Change these two numbers to the pins connected to your encoder.
@@ -173,10 +174,10 @@ void loop() {
     pitchPsiErrorLast1 = pitchPsiError; 
 
     // set motor control value array, doing sign conversion for motor orientation correction
-    mOutVals[0] = coerce(voltageToMotorShield(-rollVa));
-    mOutVals[2] = coerce(voltageToMotorShield(rollVa));
-    mOutVals[1] = coerce(voltageToMotorShield(pitchVa));
-    mOutVals[3] = coerce(voltageToMotorShield(-pitchVa));
+    mOutVals[0] = coerce(voltageToMotorShield(fixDeadZone(-rollVa)));
+    mOutVals[2] = coerce(voltageToMotorShield(fixDeadZone(rollVa)));
+    mOutVals[1] = coerce(voltageToMotorShield(fixDeadZone(pitchVa)));
+    mOutVals[3] = coerce(voltageToMotorShield(fixDeadZone(-pitchVa)));
     
     for (j = 0; j < 4; ++j) {
       sysSer.print(mOutNames[j]);
@@ -196,6 +197,10 @@ void stopMotors(){
     sysSer.print(mOutNames[j]);
     sysSer.print(0);
   }
+}
+
+double fixDeadZone(double in) {
+  return in + deadZone*getSign(in);
 }
 
 int coerce(double in){
