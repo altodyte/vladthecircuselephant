@@ -98,10 +98,10 @@ G = C*s^2/(tL*s+1)/(tL*s-1);
 
 %% motor transfer functions
 % motor armature voltage to velocity (proportional and integral)
-Ma = Km/(tm*s+1);
+% Ma = Km/(tm*s+1);
 
 % pre-velocity voltage to position TF with velocity feedback
-Mv = Kmv/s/(tmv*s+1); % algebraically-found
+% Mv = Kmv/s/(tmv*s+1); % algebraically-found
 % Mv = minreal(M/(1+Kv*M)/s); % symbolically-found TF
 
 % pre-position voltage to position TF with position feedback
@@ -148,7 +148,7 @@ figure('OuterPosition',[800+1 40+1 800 900-80]); % left, bottom, width, height
 % margin(K*Ma/s*G);
 % nyquist(K*Ma/s*G);
 % axis equal
-% step(K*Ma/s/(1+K*Ma/s*G)/10, 0:0.01:2);
+% step(minreal(K*Ma/s/(1+K*Ma/s*G)/10), 100);
 % h = title('Step Response; $K = \frac{-400(0.25s+1)}{s}$');
 % set(h, 'interpreter', 'latex');
 
@@ -182,6 +182,7 @@ figure('OuterPosition',[800+1 40+1 800 900-80]); % left, bottom, width, height
 % legend('K', 'Mv', 'G', 'location', 'best');
 % nyquist(K*Mv*G);
 % axis equal
+% margin(K*Mv*G);
 
 %% lag compensator and position minor loop analysis
 % rlocus(K*Mp*G);
@@ -201,6 +202,7 @@ figure('OuterPosition',[800+1 40+1 800 900-80]); % left, bottom, width, height
 % set(h, 'interpreter', 'latex');
 % nyquist(K*Mp*G);
 % axis equal
+% margin(K*Mp*G);
 
 %% double lag compensator and position minor loop analysis
 % rlocus(K*Mp*G);
@@ -226,6 +228,7 @@ figure('OuterPosition',[800+1 40+1 800 900-80]); % left, bottom, width, height
 % set(h, 'interpreter', 'latex');
 % nyquist(K*Mp*G);
 % axis equal
+% margin(K*Mp*G);
 
 % pzmap(Ma, Mp, G);
 % legend('M', 'Mp', 'G');
