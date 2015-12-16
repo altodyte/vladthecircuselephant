@@ -27,13 +27,13 @@ finishup = onCleanup(@() cleanup(s));
         plot(timeVec, pitchPsi, '--', 'linewidth', 2);
         hold all
         plot(timeVec, pitchPhi, '--', 'linewidth', 2);
-        plot(timeVec, pitchVa, '--', 'linewidth', 2);
+        plot(timeVec, pitchVa/12, '--', 'linewidth', 2);
         plot(timeVec, rollPsi, 'linewidth', 2);
         plot(timeVec, rollPhi, 'linewidth', 2);
-        plot(timeVec, rollVa, 'linewidth', 2);
+        plot(timeVec, rollVa/12, 'linewidth', 2);
         legend('pitchPsi', 'pitchPhi', 'pitchVa', 'rollPsi', 'rollPhi', 'rollVa');
         xlabel('time [s]');
-        ylabel('value [rad or rad/s or V]');
+        ylabel('value [rad or rad/s or 12 V]');
         %
         %         subplot(2,1,1);
         %         hold all
