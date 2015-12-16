@@ -50,6 +50,8 @@ double constants[numC];
 // a, b, c, d, e, k_p, P_phi, I_phi, D_phi, P_psi, I_psi, D_psi
 const char inChars[] = {'a', 'b', 'c', 'd', 'e', 'k', 'P','I','D','R','Y','H'}; 
 
+bool spew = true;
+
 // PITCH
 // PSI
 double pitchPsi = 0;
@@ -128,6 +130,9 @@ void loop() {
         for (j = 0; j < numC; ++j) { Serial.print(constants[j], 5); Serial.print(" "); }
         Serial.println();
       }
+      if (inChar == 'w') {
+        spew = !spew;
+      }
     }
 
     // calculate phi errors
@@ -184,9 +189,10 @@ void loop() {
       sysSer.print(mOutVals[j]);
       // sysSer.write(mOutVals, 8);
     }
-
-    Serial.write(currTimeBytes, 4);
-    for (j = 0; j < 6; ++j) Serial.write((byte*) outVals[j], 4);
+    if (spew){
+      Serial.write(currTimeBytes, 4);
+      for (j = 0; j < 6; ++j) Serial.write((byte*) outVals[j], 4);
+    }
 
     // Serial.println((long) (micros() - startTime));
   }
