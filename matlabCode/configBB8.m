@@ -1,6 +1,6 @@
 function configBB8
 % BB8 % open simulink project
-BB8_sim % open simulink project
+% BB8_sim % open simulink project
 
 %% psi input model (https://en.wikipedia.org/wiki/Smoothstep)
 stepMax = 10; % final value of step [rad]
@@ -48,27 +48,32 @@ Km = Kt/(Ra*Bpsi + Kt*Ke);
 tm = Ra*Jpsi/(Ra*Bpsi + Kt*Ke);
 
 %% compensator parameters
-% position minor loop around motor and lag compensator(s)
-Kv = 0; % motor velocity feedback loop gain
+% position minor loop and double lag compensator
 Kp = 0.5; % motor position feedback loop gain
-% double lag
-% Kk = -8000; % K gain
-% tkp = 4; % K pole time constant
-% tkz = 1; % K zero time constant
-% single lag
-Kk = -4000; % K gain
-tkp = 8; % K pole time constant
+Kk = -1500; % K gain
+tkp = 4; % K pole time constant
 tkz = 1; % K zero time constant
 
+% position minor loop and single lag compensator
+% Kp = 0.75; % motor position feedback loop gain
+% Kk = -400; % K gain
+% tkp = 2; % K pole time constant
+% tkz = 1/4; % K zero time constant
+
+% only lag compensator
+% Kk = -1000; % K gain
+% tkp = 2; % K pole time constant
+% tkz = 1/4; % K zero time constant
+
+% velocity minor loop
+Kv = 0; % motor velocity feedback loop gain
+
 % only integral compensator
-% Kk = 200; % gain
+% Kk = -400; % gain
 % tkz = 1/4; % zero time constant
 
-% only velocity minor loop around motor
-% Kv = 0; % motor velocity feedback loop gain
-
-% only proportional
-% Kk = -1000;
+% only proportional compensator
+% Kk = -10000;
 
 %% compensator derived values
 % position minor loop around motor
@@ -85,14 +90,14 @@ tmp = (sqrt(1+4*Kp*Kmv*tmv)-1)/(2*Kp*Kmv);
 %% compensator transfer functions
 % K = Kk; % proportional
 % K = Kk*(tkz*s+1)/s; % integral
-K = Kk*(tkz*s+1)/(tkp*s+1); % single lag
-% K = Kk*((tkz*s+1)/(tkp*s+1))^2; % double lag
+% K = Kk*(tkz*s+1)/(tkp*s+1); % single lag
+K = Kk*((tkz*s+1)/(tkp*s+1))^2; % double lag
 
 %% plant transfer function
 G = C*s^2/(tL*s+1)/(tL*s-1);
 
 %% motor transfer functions
-% motor armature voltage to velocity
+% motor armature voltage to velocity (proportional and integral)
 Ma = Km/(tm*s+1);
 
 % pre-velocity voltage to position TF with velocity feedback
@@ -103,42 +108,127 @@ Mv = Kmv/s/(tmv*s+1); % algebraically-found
 Mp = Kmp/(te*s-1)/(tmp*s+1); % algebraically-found
 % Mp = minreal(Mv/(1-Kp*Mv)); % symbolically-found TF
 
+figure('OuterPosition',[800+1 40+1 800 900-80]); % left, bottom, width, height
 %% proportional compensator analysis
-% rlocus(-M/s*G);
-% figure;
-% pzmap(M/s,G);
+% rlocus(-Ma/s*G);
+% axis([-450 50 -250 250]);
+% hpos = get(gcf, 'Position');
+% set(gcf, 'Position', [hpos([1 2 4]) hpos(4)]);
+% h = title('Proportional Compensator Root Locus');
+% set(h, 'interpreter', 'latex');
+% rlocus(-Ma/s*G);
+% axis([-5 5 -5 5]);
+% hpos = get(gcf, 'Position');
+% set(gcf, 'Position', [hpos([1 2 4]) hpos(4)]);
+% h = title('Proportional Compensator Root Locus');
+% set(h, 'interpreter', 'latex');
+% pzmap(Ma/s,G);
 % legend('M','G');
+% margin(K*Ma/s*G);
+% nyquist(K*Ma/s*G);
+% axis equal
+% step((K*Ma/s)/(1+K*Ma/s*G)/10, 0:0.001:2);
+% title('Step Response; K = -10000');
 
 %% integral compensator analysis
-% rlocus(-K*M/s*G);
-% figure;
-% pzmap(K,M/s,G);
-% legend('K','M','G');
-% figure;
-% margin(-K*M/s*G);
-% figure;
-% step(-K*M/s*G/(1-K*M/s*G));
-% figure;
-% nyquist(-K*M/s*G);
+% rlocus(K*Ma/s*G);
+% axis([-450 50 -250 250]);
+% hpos = get(gcf, 'Position');
+% set(gcf, 'Position', [hpos([1 2 4]) hpos(4)]);
+% h = title('Integral Compensator Root Locus');
+% set(h, 'interpreter', 'latex');
+% rlocus(K*Ma/s*G, logspace(-2, 2, 20000));
+% axis([-10 4 -7 7]);
+% hpos = get(gcf, 'Position');
+% set(gcf, 'Position', [hpos([1 2 4]) hpos(4)]);
+% h = title('Integral Compensator Root Locus');
+% set(h, 'interpreter', 'latex');
+% pzmap(K,Ma/s,G);
+% legend('K','Ma','G');
+% margin(K*Ma/s*G);
+% nyquist(K*Ma/s*G);
+% axis equal
+% step(K*Ma/s/(1+K*Ma/s*G)/10, 0:0.01:2);
+% h = title('Step Response; $K = \frac{-400(0.25s+1)}{s}$');
+% set(h, 'interpreter', 'latex');
 
 %% integral compensator and velocity minor loop analysis
-% rlocus(-K*Mv*G);
-% figure;
-% pzmap(K,Mv,G);
-% legend('K','Mv','G');
-% figure;
-% nyquist(-K*Mv*G);
+% rlocus(K*Mv*G);
+% axis([-450 50 -250 250]);
+% hpos = get(gcf, 'Position');
+% set(gcf, 'Position', [hpos([1 2 4]) hpos(4)]);
+% h = title('Velocity Minor Loop and Integral Compensator Root Locus');
+% set(h, 'interpreter', 'latex');
 
-%% lag compensator, velocity minor loop, and position minor loop analysis
-% pzmap((K*Mp)/(1+K*Mp*G));
-% margin(-2000*Mp*G);
-% [Gm, Pm, Wgm, Wpm] = margin(K*Mp*G);
-% Pm
-% step(minreal(K*Mp*G/(1+K*Mp*G)));
-% step(K*Mp*G/(1+K*Mp*G),20);
+%% lag compensator
+% rlocus(K*Mv*G);
+% axis([-450 50 -250 250]);
+% hpos = get(gcf, 'Position');
+% set(gcf, 'Position', [hpos([1 2 4]) hpos(4)]);
+% h = title('Lag Compensator Root Locus');
+% set(h, 'interpreter', 'latex');
+% rlocus(K*Mv*G, logspace(-3, 2, 20000));
+% axis([-10 4 -7 7]);
+% hpos = get(gcf, 'Position');
+% set(gcf, 'Position', [hpos([1 2 4]) hpos(4)]);
+% h = title('Lag Compensator Root Locus');
+% set(h, 'interpreter', 'latex');
+% pzmap(K, Mv, G);
+% axis([-10 4 -7 7]);
+% hpos = get(gcf, 'Position');
+% set(gcf, 'Position', [hpos([1 2 4]) hpos(4)]);
+% h = title('Lag Compensator Pole-Zero Map');
+% set(h, 'interpreter', 'latex');
+% legend('K', 'Mv', 'G', 'location', 'best');
+% nyquist(K*Mv*G);
+% axis equal
 
-pzmap(Ma, Mp, G);
-legend('M', 'Mp', 'G');
+%% lag compensator and position minor loop analysis
+% rlocus(K*Mp*G);
+% axis([-450 50 -250 250]);
+% hpos = get(gcf, 'Position');
+% set(gcf, 'Position', [hpos([1 2 4]) hpos(4)]);
+% h = title('Position Minor Loop and Lag Compensator Root Locus');
+% set(h, 'interpreter', 'latex');
+% rlocus(K*Mp*G, logspace(-3, 2, 10000));
+% axis([-10 4 -7 7]);
+% hpos = get(gcf, 'Position');
+% set(gcf, 'Position', [hpos([1 2 4]) hpos(4)]);
+% h = title('Position Minor Loop and Lag Compensator Root Locus');
+% set(h, 'interpreter', 'latex');
+% step(minreal(K*Mp/(1+K*Mp*G)/10), 20);
+% h = title('Step Response; $K = -400\frac{0.25s+1}{2s+1}$; $K_p = 0.75$');
+% set(h, 'interpreter', 'latex');
+% nyquist(K*Mp*G);
+% axis equal
+
+%% double lag compensator and position minor loop analysis
+% rlocus(K*Mp*G);
+% axis([-450 50 -250 250]);
+% hpos = get(gcf, 'Position');
+% set(gcf, 'Position', [hpos([1 2 4]) hpos(4)]);
+% h = title('Position Minor Loop and Double Lag Compensator Root Locus');
+% set(h, 'interpreter', 'latex');
+% rlocus(K*Mp*G);
+% axis([-10 4 -7 7]);
+% hpos = get(gcf, 'Position');
+% set(gcf, 'Position', [hpos([1 2 4]) hpos(4)]);
+% h = title('Position Minor Loop and Double Lag Compensator Root Locus');
+% set(h, 'interpreter', 'latex');
+% pzmap(minreal(K*Mp/(1+K*Mp*G)/10));
+% axis([-5 3 -4 4]);
+% hpos = get(gcf, 'Position');
+% set(gcf, 'Position', [hpos([1 2 4]) hpos(4)]);
+% h = title('Position Minor Loop and Double Lag Compensator Root Locus');
+% set(h, 'interpreter', 'latex');
+% step(minreal(K*Mp/(1+K*Mp*G)/10), 40);
+% h = title('Step Response; $K = -1500\frac{s+1}{4s+1}^2$; $K_p = 0.5$');
+% set(h, 'interpreter', 'latex');
+% nyquist(K*Mp*G);
+% axis equal
+
+% pzmap(Ma, Mp, G);
+% legend('M', 'Mp', 'G');
 % figure;
 % subplot(2,2,1);
 % rlocus(K*Mp*G);
