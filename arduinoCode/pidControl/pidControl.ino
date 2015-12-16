@@ -4,13 +4,18 @@
 #include <Adafruit_MotorShield.h>
 #include "utility/Adafruit_PWMServoDriver.h"
 
-/******************************************************************************
-************** OBJECTS AND PIN-DEPENDENT DECLARATIONS *************************
-******************************************************************************/
-
-#define LED_PIN 13
+// misc variables
+// #define DEBUG
 bool blinkState = false;
+unsigned char loopDuration = 10; // loop should last as close to x milliseconds as possible
+unsigned long nextLoop = 0;
+unsigned char j; // loop counter
+static union {
+  unsigned long currTime;
+  byte currTimeBytes[4];
+};
 
+// encoder variables
 // Change these two numbers to the pins connected to your encoder.
 //   Best Performance: both pins have interrupt capability
 //   Good Performance: only the first pin has interrupt capability
@@ -19,21 +24,12 @@ Encoder enc0(2,10);
 Encoder enc1(3,12);
 Encoder enc2(18,16);
 Encoder enc3(19,17);
-//   avoid using pins with LEDs attached
 
-// HardwareSerial & compSer = Serial;
+// serial variables
 HardwareSerial & sysSer = Serial3;
-// #define DEBUG
 char inChar;
-char mOutNames[] = {'a', 'b', 'c', 'd'};
-int mOutVals[4];
-unsigned char j;
-int k = 0;
 
-/******************************************************************************
-***************************** Encoder State Variables *************************
-******************************************************************************/
-
+// encoder variables
 long enc0old  = -999;
 long enc1old = -999;
 long enc2old = -999;
@@ -43,77 +39,78 @@ long enc1new = enc1.read();
 long enc2new = enc2.read();
 long enc3new = enc3.read();
 
-/******************************************************************************
-****************************** Motor State Variables **************************
-******************************************************************************/
+// motor variables
+char mOutNames[] = {'a', 'b', 'c', 'd'};
+int mOutVals[4];
 
-int loopDuration = 2; // loop should last as close to 2 milliseconds as possible
-long long nextLoop = 0;
-
-bool rollDebug = false;
-
+// controller variables
 const unsigned char numC = 12;
 double constants[numC];
-const char inChars[] = {'a', 'b', 'c', 'd', 'e', 'k', 'P', 'I', 'D', 'r','y','h'};
+// a, b, c, d, e, k_p, P_phi, I_phi, D_phi, P_psi, I_psi, D_psi
+const char inChars[] = {'a', 'b', 'c', 'd', 'e', 'k', 'P','I','D','R','Y','H'}; 
 
 // PITCH
 // PSI
 double pitchPsi = 0;
 double pitchPsiSet = 0;
-double pitchPsiError = 0;
-// PHI
+double pitchPsiError = 0, pitchPsiErrorLast1 = 0;
+double pitchPsiErrorDeriv = 0;
+// PHI -- set is always 0
 double pitchPhi = 0;
-double pitchPhiError = 0, pitchPhiErrorLast = 0;
-double pitchPhiDeriv = 0;
+double pitchPhiError = 0, pitchPhiErrorLast1 = 0, pitchPhiErrorLast2 = 0;
+double pitchPhiErrorDeriv = 0;
 // Commands / Voltages
-double pitchVp = 0, pitchVpLast = 0;
+double pitchVp = 0, pitchVpLast1 = 0, pitchVpLast2 = 0;
 double pitchVv = 0;
 long pitchVa = 0;
+
 // ROLL
 // PSI
 double rollPsi = 0;
 double rollPsiSet = 0;
-double rollPsiError = 0;
-// PHI
+double rollPsiError = 0, rollPsiErrorLast1 = 0;
+double rollPsiErrorDeriv = 0;
+// PHI -- set is always 0
 double rollPhi = 0;
-double rollPhiError = 0, rollPhiErrorLast = 0;
-double rollPhiDeriv = 0;
+double rollPhiError = 0, rollPhiErrorLast1 = 0, rollPhiErrorLast2 = 0;
+double rollPhiErrorDeriv = 0;
 // Commands / Voltages
-double rollVp = 0, rollVpLast = 0;
+double rollVp = 0, rollVpLast1 = 0, rollVpLast2 = 0;
 double rollVv = 0;
 long rollVa = 0;
 
+// pointers to the values we're sending out for logging
+double* outVals[] = {&pitchPsi, &pitchPhi, &pitchVa, &rollPsi, &rollPhi, &rollVa};
+
 void setup() {
-  sysSer.setTimeout(5);
+  sysSer.setTimeout(2);
+  Serial.setTimeout(2);
 
   // initialize serial communication
   Serial.begin(250000);
-  sysSer.begin(250000);
-  fuck(); // kills motors
+  // sysSer.begin(250000);
+  sysSer.begin(125000); // slower serial because optoisolator sucks
+  stopMotors(); // kills motors
 
   // configure Arduino LED for heartbeat
-  pinMode(LED_PIN, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
 
-  for (k = 0; k < numC; ++k) constants[k] = EEPROM_readDouble(4*k);
+  for (j = 0; j < numC; ++j) constants[j] = EEPROM_readDouble(4*j);
 
   nextLoop = millis() + loopDuration;
 }
 
-#ifdef DEBUG
-  long long startTime = 0;
-#endif
+// long long startTime = 0;
 
 void loop() {
-  if (millis() > nextLoop) {
-    #ifdef DEBUG
-      startTime = micros();
-    #endif
-
+  currTime = millis();
+  if (currTime > nextLoop) {
+    // startTime = micros();
     nextLoop += loopDuration;
 
     // blink LED to indicate activity
     blinkState = !blinkState;
-    digitalWrite(LED_PIN, blinkState);
+    digitalWrite(LED_BUILTIN, blinkState);
 
     // takes 5.5 ms for accelerometer to get new data
     while (sysSer.available()) {
@@ -125,13 +122,10 @@ void loop() {
     // read constants from serial
     while (Serial.available()) {
       inChar = Serial.read();
-      for (k = 0; k < numC; ++k) if (inChar == inChars[k]) EEPROM_writeDouble(k*4, constants[k] = Serial.parseFloat());
+      for (j = 0; j < numC; ++j) if (inChar == inChars[j]) EEPROM_writeDouble(j*4, constants[j] = Serial.parseFloat());
       if (inChar == 'z') {
-        for (k = 0; k < numC; ++k) { Serial.print(constants[k],5); Serial.print(" "); }
+        for (j = 0; j < numC; ++j) { Serial.print(constants[j], 5); Serial.print(" "); }
         Serial.println();
-      }
-      if (inChar == 'w') {
-        rollDebug = !rollDebug;
       }
     }
 
@@ -139,9 +133,9 @@ void loop() {
     rollPhiError = 0 - rollPhi;
     pitchPhiError = 0 - pitchPhi;
 
-    // calculate phi derivatives
-    rollPhiDeriv = (rollPhiError-rollPhiErrorLast)/loopDuration;
-    pitchPhiDeriv = (pitchPhiError-pitchPhiErrorLast)/loopDuration;
+    // calculate phi error derivatives
+    rollPhiErrorDeriv = (rollPhiError-rollPhiErrorLast1)/loopDuration;
+    pitchPhiErrorDeriv = (pitchPhiError-pitchPhiErrorLast1)/loopDuration;
 
     // calculate psi and psi errors
     rollPsi = ticksToRadians(long((-enc0.read()-enc2.read())/2));
@@ -149,84 +143,74 @@ void loop() {
     pitchPsi = ticksToRadians(long((enc1.read()+enc3.read())/2));
     pitchPsiError = pitchPsi - pitchPsiSet;
 
+    // calculate psi error derivatives
+    rollPsiErrorDeriv = (rollPsiError - rollPsiErrorLast1)/loopDuration;
+    pitchPsiErrorDeriv = (pitchPsiError - pitchPsiErrorLast1)/loopDuration;
+
     // calculate control signals
-    rollVp = -constants[6]*rollPhiError - constants[8]*rollPhiDeriv - constants[9]*rollPsiError; // p-d control
-    pitchVp = -constants[6]*pitchPhiError - constants[8]*pitchPhiDeriv - constants[9]*pitchPsiError; // p control
+    // control from phi
+    rollVp = -constants[6]*rollPhiError - constants[7]*0 - constants[8]*rollPhiErrorDeriv;
+    // control from psi
+    rollVp = rollVp -constants[6]*rollPsiError - constants[7]*0 - constants[8]*rollPsiErrorDeriv;
+    // control from phi
+    pitchVp = -constants[6]*pitchPhiError -constants[7]*0 - constants[8]*pitchPhiErrorDeriv;
+    // control from psi
+    pitchVp = pitchVp - constants[6]*pitchPsiError -constants[7]*0 - constants[8]*pitchPsiErrorDeriv;
 
-    rollVa = coerce(long(rollVp),-255,255);
-    pitchVa = coerce(long(pitchVp),-255,255);
-
-    if (rollDebug){
-      Serial.print(rollVa);
-      Serial.print(" = -");
-      Serial.print(constants[6]); // Proportional Coefficient
-      Serial.print("*");
-      Serial.print(rollPhiError,5); // Proportional error term
-      Serial.print(" + ");
-      Serial.print(constants[7]); // Integral Coefficient
-      Serial.print("*");
-      Serial.print(0,5); // Integral error term
-      Serial.print(" - ");
-      Serial.print(constants[8]); // Derivative Coefficient
-      Serial.print("*");
-      Serial.println(rollPhiErrorLast,5); // Derivative error term
-    }
+    rollVa = long(rollVp);
+    pitchVa = long(pitchVp);
 
     // save current values for next loop
-    rollPhiErrorLast = rollPhiError;
-    rollVpLast = rollVp;
-    pitchPhiErrorLast = pitchPhiError;
-    pitchVpLast = pitchVp;
+    rollPhiErrorLast2 = rollPhiErrorLast1;
+    rollVpLast2 = rollVpLast1;
+    pitchPhiErrorLast2 = pitchPhiErrorLast1;
+    pitchVpLast2 = pitchVpLast1;
+    rollPhiErrorLast1 = rollPhiError;
+    rollVpLast1 = rollVp;
+    pitchPhiErrorLast1 = pitchPhiError;
+    pitchVpLast1 = pitchVp;
+    rollPsiErrorLast1 = rollPsiError;
+    pitchPsiErrorLast1 = pitchPsiError; 
 
     // set motor control value array, doing sign conversion for motor orientation correction
-    mOutVals[0] = -rollVa;
-    mOutVals[2] = rollVa;
-    mOutVals[1] = pitchVa;
-    mOutVals[3] = -pitchVa;
+    mOutVals[0] = coerce(voltageToMotorShield(-rollVa));
+    mOutVals[2] = coerce(voltageToMotorShield(rollVa));
+    mOutVals[1] = coerce(voltageToMotorShield(pitchVa));
+    mOutVals[3] = coerce(voltageToMotorShield(-pitchVa));
     
-    // send motor commands every other loop, because motor controller is too slow to take commands every loop
-    if (++k % 2 == 0) {
-      for (j = 0; j < 4; ++j) {
-        sysSer.print(mOutNames[j]);
-        sysSer.print(mOutVals[j]);
-      }
+    for (j = 0; j < 4; ++j) {
+      sysSer.print(mOutNames[j]);
+      sysSer.print(mOutVals[j]);
+      // sysSer.write(mOutVals, 8);
     }
 
-    #ifdef DEBUG
-      Serial.println((long) (micros() - startTime));
-    #endif
+    Serial.write(currTimeBytes, 4);
+    for (j = 0; j < 6; ++j) Serial.write((byte*) outVals[j], 4);
+
+    // Serial.println((long) (micros() - startTime));
   }
 }
 
-void fuck(){
-    for (j = 0; j < 4; ++j) {
-      sysSer.print(mOutNames[j]);
-      sysSer.print(0);
-    }
+void stopMotors(){
+  for (j = 0; j < 4; ++j) {
+    sysSer.print(mOutNames[j]);
+    sysSer.print(0);
+  }
 }
 
-/******************************************************************************
-**************************** Control Scaling Functions ************************
-******************************************************************************/
-// Mapping Functions
-int coerce(int in, int rangeMin, int rangeMax){
-  // Bound integer input to range determined by min and max
-  if (in<rangeMin){ return rangeMin; }
-  else if (in>rangeMax){ return rangeMax; }
+int coerce(double in){
+  if (in<-255){ return -255; }
+  else if (in>255){ return 255; }
   else { return in; }
 }
 
-long voltageToMotorShield(double voltage){
-    return (long) 255*(voltage/12.0);
+long long voltageToMotorShield(double voltage){
+    return (long long) 255*(voltage/12.0);
 }
 
 double ticksToRadians(long ticks){
     return ticks*6.0*M_PI/1000.0;
 }
-
-/******************************************************************************
-********************** Control Constant EEPROM Management *********************
-******************************************************************************/
 
 void EEPROM_writeDouble(int ee, double value)
 {
