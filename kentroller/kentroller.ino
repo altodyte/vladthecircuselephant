@@ -75,11 +75,13 @@ double rollPhiErrorLast2 = 0;
 double* outVals[] = {&pitchPsi, &pitchPhi, &pitchVa, &rollPsi, &rollPhi, &rollVa};
 
 void setup() {
-  sysSer.setTimeout(1);
+  sysSer.setTimeout(2);
+  Serial.setTimeout(2);
 
   // initialize serial communication
   Serial.begin(250000);
-  sysSer.begin(250000);
+  // sysSer.begin(250000);
+  sysSer.begin(40000); // slower serial because optoisolator sucks
   stopMotors(); // kills motors
 
   // configure Arduino LED for heartbeat

@@ -25,8 +25,9 @@ void setup() {
     motors[j] = AFMS.getMotor(j+1);
   }
   // initialize serial communication
-  masterSer.setTimeout(5);
-  masterSer.begin(250000);
+  masterSer.setTimeout(2);
+  // masterSer.begin(250000);
+  masterSer.begin(40000); // slower serial because optoisolator sucks
 
   // configure Arduino LED for heartbeat
   pinMode(LED_PIN, OUTPUT);
