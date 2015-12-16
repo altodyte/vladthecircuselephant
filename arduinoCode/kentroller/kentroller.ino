@@ -141,16 +141,16 @@ void loop() {
     pitchPsiError = pitchPsi - pitchPsiSet;
 
     // calculate control signals
-    // rollVp = constants[3]*rollVpLast1 - constants[4]*rollVpLast2 - constants[0]*rollPhiError + constants[1]*rollPhiErrorLast1 - constants[2]*rollPhiErrorLast2; // double lag
-    // pitchVp = constants[3]*pitchVpLast1 - constants[4]*pitchVpLast2 - constants[0]*pitchPhiError + constants[1]*pitchPhiErrorLast1 - constants[2]*pitchPhiErrorLast2;
+    rollVp = constants[3]*rollVpLast1 - constants[4]*rollVpLast2 - constants[0]*rollPhiError + constants[1]*rollPhiErrorLast1 - constants[2]*rollPhiErrorLast2; // double lag
+    pitchVp = constants[3]*pitchVpLast1 - constants[4]*pitchVpLast2 - constants[0]*pitchPhiError + constants[1]*pitchPhiErrorLast1 - constants[2]*pitchPhiErrorLast2;
     // rollVp = constants[2]*rollVpLast1 - constants[0]*rollPhiError + constants[1]*rollPhiErrorLast1; // single lag
     // pitchVp = constants[2]*pitchVpLast1 - constants[0]*pitchPhiError + constants[1]*pitchPhiErrorLast1;
-    // rollVv = rollVp + constants[3]*rollPsiError; // single or double lag
-    // rollVa = rollVv;
-    // pitchVv = pitchVp + constants[3]*pitchPsiError;
-    // pitchVa = pitchVv;
-    rollVa = constants[6]*rollPhi; // proportional
-    pitchVa = constants[6]*pitchPhi;
+    rollVv = rollVp + constants[3]*rollPsiError; // single or double lag
+    rollVa = rollVv;
+    pitchVv = pitchVp + constants[3]*pitchPsiError;
+    pitchVa = pitchVv;
+    // rollVa = constants[6]*rollPhi; // proportional
+    // pitchVa = constants[6]*pitchPhi;
 
     // save current values for next loop
     rollPhiErrorLast2 = rollPhiErrorLast1;

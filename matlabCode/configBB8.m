@@ -52,7 +52,7 @@ tm = Ra*Jpsi/(Ra*Bpsi + Kt*Ke);
 Kv = 0; % motor velocity feedback loop gain
 Kp = 0.5; % motor position feedback loop gain
 % double lag
-Kk = -4000; % K gain
+Kk = -8000; % K gain
 tkp = 4; % K pole time constant
 tkz = 1; % K zero time constant
 % single lag
@@ -134,21 +134,21 @@ Mp = Kmp/(te*s-1)/(tmp*s+1); % algebraically-found
 % step(minreal(K*Mp*G/(1+K*Mp*G)));
 % step(K*Mp*G/(1+K*Mp*G),20);
 
-% figure;
-% subplot(2,2,1);
-% rlocus(K*Mp*G);
-% subplot(2,2,2);
-% pzmap(K,Mp,G);
-% legend('K','Mp','G');
-% subplot(2,2,3);
-% margin(K*Mp*G);
-% subplot(2,2,4);
-% nyquist(K*Mp*G);
+figure;
+subplot(2,2,1);
+rlocus(K*Mp*G);
+subplot(2,2,2);
+pzmap(K,Mp,G);
+legend('K','Mp','G');
+subplot(2,2,3);
+margin(K*Mp*G);
+subplot(2,2,4);
+nyquist(K*Mp*G);
 
-% sysd = c2d(K, 0.002)
-% [Num, Den, ~] = tfdata(sysd);
-% vpa(Num{:}, 10)
-% vpa(Den{:}, 10)
+sysd = c2d(K, 0.010)
+[Num, Den, ~] = tfdata(sysd);
+vpa(Num{:}, 10)
+vpa(Den{:}, 10)
 
 %% setting block properties from parameters
 hws = get_param('BB8_sim', 'modelworkspace');
