@@ -10,7 +10,12 @@ bool blinkState = false;
 unsigned char loopDuration = 10; // loop should last as close to x milliseconds as possible
 unsigned long nextLoop = 0;
 unsigned char j; // loop counter
-unsigned long currTime = 0;
+static union {
+  unsigned long currTime;
+  byte currTimeBytes[4];
+};
+
+
 
 // encoder variables
 // Change these two numbers to the pins connected to your encoder.
@@ -81,7 +86,7 @@ void setup() {
   // initialize serial communication
   Serial.begin(250000);
   // sysSer.begin(250000);
-  sysSer.begin(40000); // slower serial because optoisolator sucks
+  sysSer.begin(125000); // slower serial because optoisolator sucks
   stopMotors(); // kills motors
 
   // configure Arduino LED for heartbeat
@@ -141,9 +146,9 @@ void loop() {
     // rollVp = constants[2]*rollVpLast1 - constants[0]*rollPhiError + constants[1]*rollPhiErrorLast1; // single lag
     // pitchVp = constants[2]*pitchVpLast1 - constants[0]*pitchPhiError + constants[1]*pitchPhiErrorLast1;
     // rollVv = rollVp + constants[3]*rollPsiError; // single or double lag
-    // rollVa = voltageToMotorShield(rollVv);
+    // rollVa = rollVv;
     // pitchVv = pitchVp + constants[3]*pitchPsiError;
-    // pitchVa = voltageToMotorShield(pitchVv); 
+    // pitchVa = pitchVv;
     rollVa = constants[6]*rollPhi; // proportional
     pitchVa = constants[6]*pitchPhi;
 
@@ -158,10 +163,10 @@ void loop() {
     pitchVpLast1 = pitchVp;
 
     // set motor control value array, doing sign conversion for motor orientation correction
-    mOutVals[0] = coerce(-rollVa);
-    mOutVals[2] = coerce(rollVa);
-    mOutVals[1] = coerce(pitchVa);
-    mOutVals[3] = coerce(-pitchVa);
+    mOutVals[0] = coerce(voltageToMotorShield(-rollVa));
+    mOutVals[2] = coerce(voltageToMotorShield(rollVa));
+    mOutVals[1] = coerce(voltageToMotorShield(pitchVa));
+    mOutVals[3] = coerce(voltageToMotorShield(-pitchVa));
 
     // proSer.print(roll, 5);
     // proSer.print(' ');
@@ -181,8 +186,8 @@ void loop() {
       // sysSer.write(mOutVals, 8);
     }
 
-    Serial.write(&currTime, 4);
-    for (j = 0; j < 6; ++j) Serial.write(outVals[j], 4);
+    Serial.write(currTimeBytes, 4);
+    for (j = 0; j < 6; ++j) Serial.write((byte*) outVals[j], 4);
 
     // Serial.println((long) (micros() - startTime));
   }

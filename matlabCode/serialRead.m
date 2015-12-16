@@ -1,7 +1,7 @@
 function serialRead()
 clear
-s = serial('COM3');
-set(s, 'BaudRate', 250000, 'Timeout', 0.005, 'ByteOrder', 'littleEndian');
+s = serial('COM10');
+set(s, 'BaudRate', 250000, 'Timeout', 0.002, 'ByteOrder', 'littleEndian');
 fopen(s);
 
 finishup = onCleanup(@() cleanup(s));
@@ -16,14 +16,24 @@ finishup = onCleanup(@() cleanup(s));
         pitchPsi = pitchPsi(1:i-1);
         pitchPhi = pitchPhi(1:i-1);
         pitchVa = pitchVa(1:i-1);
-        rollPhi = rollPhi(1:i-1);
         rollPsi = rollPsi(1:i-1);
+        rollPhi = rollPhi(1:i-1);
         rollVa = rollVa(1:i-1);
 %         whos
         disp('Cleaned Up. Plotting Now.')
 %         figure('OuterPosition',[800+1 40+1 800 900-40]);
         filename = strcat(datestr(clock,'yyyymmddTHHMMSS'), '.csv');
         csvwrite(filename, [timeVec pitchPsi pitchPhi pitchVa rollPsi rollPhi rollVa]);
+        plot(timeVec, pitchPsi);
+        hold all
+        plot(timeVec, pitchPhi);
+        plot(timeVec, pitchVa);
+        plot(timeVec, rollPsi);
+        plot(timeVec, rollPhi);
+        plot(timeVec, rollVa);
+        legend('pitchPsi', 'pitchPhi', 'pitchVa', 'rollPsi', 'rollPhi', 'rollVa');
+        xlabel('time [s]');
+        ylabel('value [rad or rad/s or V]');
         %
         %         subplot(2,1,1);
         %         hold all
@@ -82,14 +92,14 @@ while(true)
             pitchPsi(i) = vals(1);
             pitchPhi(i) = vals(2);
             pitchVa(i) = vals(3);
-            rollPhi(i) = vals(4);
             rollPsi(i) = vals(5);
+            rollPhi(i) = vals(4);
             rollVa(i) = vals(6);
             
-%             disp([timeVec(i); vals]');
-            %             if mod(i,200) == 0
-            %                 disp([timeVec(i); vals]');
-            %             end
+            %             disp([timeVec(i); vals]');
+            if mod(i, 100) == 0
+                disp([timeVec(i); vals]');
+            end
             i = i + 1;
         catch ME
             disp(ME);

@@ -119,7 +119,7 @@ void setup() {
 
     // initialize serial communication
     // Serial.begin(250000);
-    Serial.begin(40000); // slower serial because optoisolator sucks
+    Serial.begin(125000); // slower serial because optoisolator sucks
 
     // initialize device
     // Serial.println(F("Initializing I2C devices..."));
@@ -149,7 +149,6 @@ void setup() {
         mpu.setDMPEnabled(true);
 
         // enable Arduino interrupt detection
-        attachInterrupt(0, dmpDataReady, RISING);
         mpuIntStatus = mpu.getIntStatus();
 
         // set our DMP Ready flag so the main loop() function knows it's okay to use it
@@ -183,7 +182,6 @@ void loop() {
     }
 
     // reset interrupt flag and get INT_STATUS byte
-    mpuInterrupt = false;
     mpuIntStatus = mpu.getIntStatus();
 
     // get current FIFO count
