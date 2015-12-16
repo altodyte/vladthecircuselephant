@@ -141,21 +141,21 @@ void loop(void) {
     // If there is data ready to be sent
     if (Serial.available()) {
       // Pull binary data from Serial and put it into packet
-      // Serial.readBytes(dataPacket.bytes, DATA_SZ);
+      Serial.readBytes(dataPacket.bytes, DATA_SZ);
 
       // Pull ASCII data from Serial and put it w/timestamp into packet
-      dataPacket.members.time = millis();
-      dataPacket.members.pitchPsi = Serial.parseFloat();
-      Serial.read();
-      dataPacket.members.pitchPhi = Serial.parseFloat();
-      Serial.read();
-      dataPacket.members.pitchVa = Serial.parseFloat();
-      Serial.read();
-      dataPacket.members.rollPsi = Serial.parseFloat();
-      Serial.read();
-      dataPacket.members.rollPhi = Serial.parseFloat();
-      Serial.read();
-      dataPacket.members.rollVa = Serial.parseFloat();
+      // dataPacket.members.time = millis();
+      // dataPacket.members.pitchPsi = Serial.parseFloat();
+      // Serial.read();
+      // dataPacket.members.pitchPhi = Serial.parseFloat();
+      // Serial.read();
+      // dataPacket.members.pitchVa = Serial.parseFloat();
+      // Serial.read();
+      // dataPacket.members.rollPsi = Serial.parseFloat();
+      // Serial.read();
+      // dataPacket.members.rollPhi = Serial.parseFloat();
+      // Serial.read();
+      // dataPacket.members.rollVa = Serial.parseFloat();
 
       // Wake up radio so it sends quickly
       radio.powerUp();
