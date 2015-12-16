@@ -1,7 +1,7 @@
 function serialRead()
 clear
-s = serial('COM3');
-set(s, 'BaudRate', 250000, 'Timeout', 0.002, 'ByteOrder', 'littleEndian');
+s = serial('COM7');
+set(s, 'BaudRate', 250000, 'Timeout', 0.001, 'ByteOrder', 'littleEndian');
 fopen(s);
 
 finishup = onCleanup(@() cleanup(s));
@@ -23,15 +23,18 @@ finishup = onCleanup(@() cleanup(s));
         disp('Cleaned Up. Plotting Now.')
 %         figure('OuterPosition',[800+1 40+1 800 900-40]);
         filename = strcat(datestr(clock,'yyyymmddTHHMMSS'), '.csv');
-        csvwrite(filename, [timeVec pitchPsi pitchPhi pitchVa rollPsi rollPhi rollVa]);
-        plot(timeVec, pitchPsi, '--', 'linewidth', 2);
+        csvwrite(filename, [timeVec pitchPsi pitchPhi pitchVa ...
+            rollPsi rollPhi rollVa]);
+        plot(timeVec, pitchPsi, 'b.-', 'linewidth', 2);
         hold all
-        plot(timeVec, pitchPhi, '--', 'linewidth', 2);
-        plot(timeVec, pitchVa/12, '--', 'linewidth', 2);
-        plot(timeVec, rollPsi, 'linewidth', 2);
-        plot(timeVec, rollPhi, 'linewidth', 2);
-        plot(timeVec, rollVa/12, 'linewidth', 2);
-        legend('pitchPsi', 'pitchPhi', 'pitchVa', 'rollPsi', 'rollPhi', 'rollVa');
+        plot(timeVec, pitchPhi, 'b--', 'linewidth', 2);
+        plot(timeVec, pitchVa/12, 'b-', 'linewidth', 1);
+        plot(timeVec, rollPsi, 'g.-', 'linewidth', 2);
+        plot(timeVec, rollPhi, 'g--','linewidth', 2);
+        plot(timeVec, rollVa/12, 'g-', 'linewidth', 1);
+        legend('pitchPsi', 'pitchPhi', 'pitchVa', ... 
+            'rollPsi', 'rollPhi', 'rollVa', ...
+            'location', 'best');
         xlabel('time [s]');
         ylabel('value [rad or rad/s or 12 V]');
         %
