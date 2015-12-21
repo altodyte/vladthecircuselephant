@@ -1,6 +1,6 @@
 function configBB8
-% BB8 % open simulink project
-% BB8_sim % open simulink project
+BB8 % open simulink project
+BB8_sim % open simulink project
 
 %% psi input model (https://en.wikipedia.org/wiki/Smoothstep)
 stepMax = 10; % final value of step [rad]
@@ -49,8 +49,8 @@ tm = Ra*Jpsi/(Ra*Bpsi + Kt*Ke);
 
 %% compensator parameters
 % position minor loop and double lag compensator
-Kp = 0.5; % motor position feedback loop gain
-Kk = -1500; % K gain
+Kp = 1; % motor position feedback loop gain
+Kk = -8000; % K gain
 tkp = 4; % K pole time constant
 tkz = 1; % K zero time constant
 
@@ -228,7 +228,7 @@ figure('OuterPosition',[800+1 40+1 800 900-80]); % left, bottom, width, height
 % set(h, 'interpreter', 'latex');
 % nyquist(K*Mp*G);
 % axis equal
-% margin(K*Mp*G);
+margin(K*Mp*G);
 
 % pzmap(Ma, Mp, G);
 % legend('M', 'Mp', 'G');

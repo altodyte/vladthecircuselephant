@@ -48,10 +48,10 @@ int mOutVals[4];
 double deadZone = 0.4;
 
 // controller variables
-const unsigned char numC = 12;
+const unsigned char numC = 14;
 double constants[numC];
-// a, b, c, d, e, k_p, P_phi, I_phi, D_phi, P_psi, I_psi, D_psi
-const char inChars[] = {'a', 'b', 'c', 'd', 'e', 'k', 'P','I','D','R','Y','H'}; 
+// a, b, c, d, e, k_p, P_phi, I_phi, D_phi, P_psi, I_psi, D_psi rollPsiSet pitchPsiSet
+const char inChars[] = {'a', 'b', 'c', 'd', 'e', 'k', 'P','I','D','R','Y','H','r','p'}; 
 
 // PITCH
 // PSI
@@ -161,9 +161,11 @@ void loop() {
 
     // calculate psi and psi errors
     rollPsi = ticksToRadians(long((-enc0.read()-enc2.read())/2));
-    rollPsiError = rollPsi - rollPsiSet;
+    // rollPsiError = rollPsi - rollPsiSet;
+    rollPsiError = rollPsi - constants[12];
     pitchPsi = ticksToRadians(long((enc1.read()+enc3.read())/2));
-    pitchPsiError = pitchPsi - pitchPsiSet;
+    // pitchPsiError = pitchPsi - pitchPsiSet;
+    pitchPsiError = pitchPsi - constants[13];
 
     // calculate psi error derivatives
     rollPsiErrorDeriv = 1000.0*(rollPsiError - rollPsiErrorLast1)/loopDuration;
@@ -179,14 +181,16 @@ void loop() {
     // control from psi
     pitchVp = pitchVp - constants[9]*pitchPsiError -constants[10]*0 - constants[11]*pitchPsiErrorDeriv;
 
+    // rollVa = rollVp - (rollPhiError>0.15)?(0.3*constants[6]*(rollPhiError-0.15*getSign(rollPhiError))):0;
+    // pitchVa = pitchVp - (rollPhiError>0.15)?(0.3*constants[6]*rollPhiError):0;
     rollVa = rollVp;
     pitchVa = pitchVp;
 
     // save current values for next loop
-    rollPhiErrorLast2 = rollPhiErrorLast1;
-    rollVpLast2 = rollVpLast1;
-    pitchPhiErrorLast2 = pitchPhiErrorLast1;
-    pitchVpLast2 = pitchVpLast1;
+    // rollPhiErrorLast2 = rollPhiErrorLast1;
+    // rollVpLast2 = rollVpLast1;
+    // pitchPhiErrorLast2 = pitchPhiErrorLast1;
+    // pitchVpLast2 = pitchVpLast1;
     rollPhiErrorLast1 = rollPhiError;
     rollVpLast1 = rollVp;
     pitchPhiErrorLast1 = pitchPhiError;
